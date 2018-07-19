@@ -1,0 +1,23 @@
+.\" Copyright (C) 2013 Amazon.com, Inc. or its affiliates.
+.TH ec2ifscan 8  2013-08-22 "" "System Administration tools and Daemons"
+.SH NAME
+ec2ifscan - find and configure elastic network interfaces
+
+.SH SYNOPSIS
+.B ec2ifscan
+
+.SH DESCRIPTION
+Elastic network interfaces require the instance metadata service to be reachable
+for correct configuration in the general case, which requires at least one
+active network interface. This condition may not be met for interfaces attached
+at instance launch time. Consequently, those interfaces can remain unconfigured.
+
+The
+.B ec2ifscan
+command may be used to find and configure elastic network interfaces in an
+unconfigured state. An interface is considered to be unconfigured if the link
+is down, and no configuration exists in /etc/sysconfig/network-scripts.
+
+A hotplug \fBadd\fR event is generated for each unconfigured interface that is
+found. This provides another opportunity for udev rules to automatically
+configure and activate the elastic network interface.

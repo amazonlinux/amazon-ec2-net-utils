@@ -1,0 +1,33 @@
+.\" Copyright (C) 2013 Amazon.com, Inc. or its affiliates.
+.TH ec2ifup 8  2013-08-22 "" "System Administration tools and Daemons"
+.SH NAME
+ec2ifup - bring an elastic network interface up
+
+ec2ifdown - take an elastic network interface down
+.SH SYNOPSIS
+.B ec2ifup IFACE
+
+.B ec2ifdown IFACE
+
+.SH DESCRIPTION
+The
+.B ec2ifup
+and
+.B ec2ifdown
+commands may be used to configure (or, respectively, deconfigure) a network
+interface based on its definition in the instance metadata store. The resulting
+configuration will be stored in /etc/sysconfig/network-scripts.
+
+These scripts take one argument: the name of the network interface (e.g. eth0).
+If the configuration for this interface is present and defines EC2SYNC=no, the
+scripts will exit without making changes. Otherwise, the configuration will be
+replaced or removed.
+
+.SH FILES
+.TP
+\fB/etc/sysconfig/network-scripts/ifcfg-<IFACE>\fR
+The configuration for the network interface.
+
+.TP
+\fB/etc/sysconfig/network-scripts/route-<IFACE>\fR
+The static route configuration for the network interface.
