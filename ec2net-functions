@@ -200,6 +200,7 @@ EOF
   # the expected interface, and dhclient accepts the lease offer.
   cat <<- EOF > ${dhclient_file}
 	supersede dhcp-server-identifier 255.255.255.255;
+        timeout 300;
 EOF
 }
 
