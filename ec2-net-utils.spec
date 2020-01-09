@@ -7,7 +7,7 @@
 Name:      ec2-net-utils
 Summary:   A set of network tools for managing ENIs
 Version:   1.2
-Release:   1.1%{?dist}
+Release:   2.1%{?dist}
 License:   MIT and GPLv2
 Group:     System Tools
 Source0:   53-ec2-network-interfaces.rules.systemd
@@ -126,6 +126,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Wed Jan  8 2020 Frederick Lefebvre <fredlef@amazon.com>
+- Explicitly set the dhcp timeout for ENIs
+
 * Tue Jul 17 2018 Frederick Lefebvre <fredlef@amazon.com>
 - Re-license under MIT
 
