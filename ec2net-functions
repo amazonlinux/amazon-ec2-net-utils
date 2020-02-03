@@ -34,6 +34,7 @@ RTABLE=${INTERFACE#eth}
 let RTABLE+=10000
 
 metadata_base="http://169.254.169.254/latest/meta-data/network/interfaces/macs"
+metadata_token=$(curl -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 20")
 config_file="/etc/sysconfig/network-scripts/ifcfg-${INTERFACE}"
 route_file="/etc/sysconfig/network-scripts/route-${INTERFACE}"
 route6_file="/etc/sysconfig/network-scripts/route6-${INTERFACE}"
@@ -57,7 +58,7 @@ get_meta() {
       return
     fi
     logger --tag ec2net "[get_meta] Trying to get ${metadata_base}/${HWADDR}/${1}"
-    meta=$(curl -s -f ${metadata_base}/${HWADDR}/${1})
+    meta=$(curl -s -f ${metadata_base}/${HWADDR}/${1} -H "X-aws-ec2-metadata-token: ${metadata_token}")
     if [ "${?}" -gt 0 ]; then
       let attempts--
       sleep 0.5
