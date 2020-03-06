@@ -7,7 +7,7 @@
 Name:      ec2-net-utils
 Summary:   A set of network tools for managing ENIs
 Version:   1.3
-Release:   1%{?dist}
+Release:   2%{?dist}
 License:   MIT and GPLv2
 Group:     System Tools
 Source0:   53-ec2-network-interfaces.rules.systemd
@@ -77,7 +77,7 @@ install -m755 %{SOURCE5} $RPM_BUILD_ROOT/sbin/
 install -m755 %{SOURCE6} $RPM_BUILD_ROOT/sbin/
 install -m755 %{SOURCE9} $RPM_BUILD_ROOT/sbin/
 install -m644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/udev/rules.d/53-ec2-network-interfaces.rules
-install -d -m755 $RPM_BUILD_ROOT$RPM_BUILD_ROOT%{_sysconfdir}/init
+install -d -m755 $RPM_BUILD_ROOT%{_sysconfdir}/init
 install -m644 %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/init
 %endif # systemd
 install -m644 %{SOURCE8} $RPM_BUILD_ROOT%{_mandir}/man8/ec2ifup.8
@@ -126,7 +126,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
-* Wed Jan  15 2020 Frederick Lefebvre <fredlef@amazon.com> 1.3-1
+* Thu Mar  5 2020 Frederick Lefebvre <fredlef@amazon.com> 1.3-2
+- Fix installation on non-systemd environments
+
+* Wed Jan 15 2020 Frederick Lefebvre <fredlef@amazon.com> 1.3-1
 - Add support for IMDSv2
 
 * Wed Jan  8 2020 Frederick Lefebvre <fredlef@amazon.com> 1.2-2.1
