@@ -40,13 +40,20 @@ config_file="/etc/sysconfig/network-scripts/ifcfg-${INTERFACE}"
 route_file="/etc/sysconfig/network-scripts/route-${INTERFACE}"
 route6_file="/etc/sysconfig/network-scripts/route6-${INTERFACE}"
 dhclient_file="/etc/dhcp/dhclient-${INTERFACE}.conf"
+MAINROUTETABLE="yes"
 
-# make no changes to unmanaged interfaces
+
 if [ -s ${config_file} ]; then
+  # make no changes to unmanaged interfaces
   unmanaged=$(LANG=C grep -l "^[[:space:]]*EC2SYNC=no\([[:space:]#]\|$\)" $config_file)
   if [ "${config_file}" == "${unmanaged}" ]; then
     logger --tag ec2net "Not managing ${INTERFACE}"
     exit
+  fi
+  # check to see if we should add a default route through ${INTERFACE} to the main kernel route table
+  no_default_route=$(LANG=C grep -l "^[[:space:]]*MAINROUTETABLE=no\([[:space:]#]\|$\)" $config_file)
+  if [ "${no_default_route}" == "${config_file}" ]; then
+    MAINROUTETABLE="no"
   fi
 fi
 
@@ -190,12 +197,18 @@ rewrite_primary() {
 	HWADDR=${HWADDR}
 	DEFROUTE=no
 	EC2SYNC=yes
+	MAINROUTETABLE=${MAINROUTETABLE}
 EOF
   cat <<- EOF > ${route_file}
 	default via ${gateway} dev ${INTERFACE} table ${RTABLE}
-	default via ${gateway} dev ${INTERFACE} metric ${RTABLE}
 	${cidr} dev ${INTERFACE} proto kernel scope link src ${primary_ipv4} table ${RTABLE}
 EOF
+  if [ "${MAINROUTETABLE}" == "yes" ]; then
+	logger --tag ec2net "[rewrite_primary] adding default route to main table for ${INTERFACE}"
+	cat <<- EOF >> ${route_file}
+	default via ${gateway} dev ${INTERFACE} metric ${RTABLE}
+EOF
+  fi
   # We would normally write to ${route6_file} here but the
   # gateway is an fe80:: link local address that we get from the
   # RA. We only get an RA if the interface has an IPv6 address.
