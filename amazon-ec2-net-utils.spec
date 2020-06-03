@@ -4,10 +4,10 @@
 %global systemd 0
 %endif
 
-Name:      ec2-net-utils
+Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
-Version:   1.3
-Release:   2%{?dist}
+Version:   1.4
+Release:   1%{?dist}
 License:   MIT and GPLv2
 Group:     System Tools
 Source0:   53-ec2-network-interfaces.rules.systemd
@@ -28,7 +28,7 @@ Source14:  write_net_rules
 Source15:  rule_generator.functions
 Source16:  ec2net-ifup@.service
 
-URL:       http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1825
+URL:       https://github.com/aws/amazon-ec2-net-utils
 BuildArch: noarch
 Requires:  curl
 Requires:  iproute
@@ -41,7 +41,7 @@ Requires: dhclient
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
-ec2-net-utils contains a set of utilities for managing elastic network
+amazon-ec2-net-utils contains a set of utilities for managing elastic network
 interfaces.
 
 %prep
@@ -126,6 +126,11 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Wed June  3 2020 Frederick Lefebvre <fredlef@amazon.com> 1.4-1
+- Rename package to match the name of the git repo
+- Fix installation on non-systemd environments
+- Support toggling default route through {INTERFACE} to main kernel route table [Prithvi Ramesh]
+
 * Thu Mar  5 2020 Frederick Lefebvre <fredlef@amazon.com> 1.3-2
 - Fix installation on non-systemd environments
 
