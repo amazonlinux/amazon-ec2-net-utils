@@ -7,7 +7,7 @@
 Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
 Version:   1.4
-Release:   1%{?dist}
+Release:   2%{?dist}
 License:   MIT and GPLv2
 Group:     System Tools
 Source0:   53-ec2-network-interfaces.rules.systemd
@@ -38,6 +38,7 @@ BuildRequires: systemd-units
 Requires: systemd-units
 %endif # systemd
 Requires: dhclient
+Provides: ec2-net-utils
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -126,6 +127,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Mon Jul 13 2020 Frederick Lefebvre <fredlef@amazon.com> 1.4-2
+- Provides ec2-net-utils for backward compatibility
+
 * Wed Jun  3 2020 Frederick Lefebvre <fredlef@amazon.com> 1.4-1
 - Rename package to match the name of the git repo
 - Fix installation on non-systemd environments
