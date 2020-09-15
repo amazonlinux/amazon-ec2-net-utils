@@ -59,13 +59,33 @@ fi
 
 get_meta() {
   logger --tag ec2net "[get_meta] Getting token for IMDSv2"
-  imds_token=$(curl -s -f -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${METADATA_BASEURL}/${METADATA_TOKEN_PATH})
-  imds_exitcode=$?
+
+  # IMDS may have become temporarily unreachable, retry
+  attempts=60
+  imds_exitcode=1
+  while [ "${imds_exitcode}" -gt 0 ]; do
+    if [ "${attempts}" -eq 0 ]; then
+      logger --tag ec2net "[get_meta] Failed to get IMDSv2 metadata token"
+      return $imds_exitcode
+    fi
+
+    imds_token=$(curl -s -f -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${METADATA_BASEURL}/${METADATA_TOKEN_PATH})
+    imds_exitcode=$?
+    if [ "${imds_exitcode}" -gt 0 ]; then
+	logger --tag ec2net "[get_meta] Failed to get IMDSv2 token from ${METADATA_BASEURL}/${METADATA_TOKEN_PATH}"
+	logger --tag ec2net "[get_meta] Retrying... ${attempts} remaining"
+	let attempts--
+	sleep 0.5
+	imds_exitcode=1
+    fi
+  done
+
   if [ "${imds_exitcode}" -gt 0 ]; then
-    logger --tag ec2net "[get_meta] Failed to get IMDSv2 token from ${METADATA_BASEURL}/${METADATA_TOKEN_PATH}"
-    logger --tag ec2net "[get_meta] Is Instance Metadata disabled? Aborting"
-    return $imds_exitcode
+      logger --tag ec2net "[get_meta] Failed to get IMDSv2 token from ${METADATA_BASEURL}/${METADATA_TOKEN_PATH}"
+      logger --tag ec2net "[get_meta] Aborting!"
+      return $imds_exitcode
   fi
+
   # IMDS can take up to 30s to provide the information of a new ENI
   attempts=60
   imds_exitcode=1
