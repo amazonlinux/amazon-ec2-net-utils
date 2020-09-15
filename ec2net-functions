@@ -60,48 +60,59 @@ fi
 get_meta() {
   logger --tag ec2net "[get_meta] Getting token for IMDSv2"
   imds_token=$(curl -s -f -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${METADATA_BASEURL}/${METADATA_TOKEN_PATH})
-  if [ "${?}" -gt 0 ]; then
+  imds_exitcode=$?
+  if [ "${imds_exitcode}" -gt 0 ]; then
     logger --tag ec2net "[get_meta] Failed to get IMDSv2 token from ${METADATA_BASEURL}/${METADATA_TOKEN_PATH}"
     logger --tag ec2net "[get_meta] Is Instance Metadata disabled? Aborting"
-    return
+    return $imds_exitcode
   fi
   # IMDS can take up to 30s to provide the information of a new ENI
   attempts=60
-  false
-  while [ "${?}" -gt 0 ]; do
+  imds_exitcode=1
+  while [ "${imds_exitcode}" -gt 0 ]; do
     if [ "${attempts}" -eq 0 ]; then
       logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
-      return
+      return $imds_exitcode
     fi
     logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
     meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
-    if [ "${?}" -gt 0 ]; then
+    imds_exitcode=$?
+    if [ "${imds_exitcode}" -gt 0 ]; then
       let attempts--
       sleep 0.5
-      false
+      imds_exitcode=1
     fi
   done
   echo "${meta}"
+  return $imds_exitcode
 }
 
 get_cidr() {
   cidr=$(get_meta 'subnet-ipv4-cidr-block')
+  ec=$?
   echo "${cidr}"
+  return $ec
 }
 
 get_ipv4s() {
   ipv4s=$(get_meta 'local-ipv4s')
+  ec=$?
   echo "${ipv4s}"
+  return $ec
 }
 
 get_primary_ipv4() {
   ipv4s=($(get_ipv4s))
+  ec=$?
   echo "${ipv4s[0]}"
+  return $ec
 }
 
 get_secondary_ipv4s() {
   ipv4s=($(get_ipv4s))
+  ec=$?
   echo "${ipv4s[@]:1}"
+  return $ec
 }
 
 get_ipv6s() {
@@ -176,6 +187,12 @@ rewrite_primary() {
   fi
   logger --tag ec2net "[rewrite_primary] Rewriting configs for ${INTERFACE}"
   cidr=$(get_cidr)
+  if [ "${?}" -gt 0 ]; then
+    # For any errors from IMDS, bail out early rather than rewriting anything
+    # We'll get back here later and be able to rewrite things.
+    logger --tag ec2net "[rewrite_primary] Error $? contacting IMDS for ${INTERFACE}. Bailing out."
+    return $?
+  fi
   if [ -z ${cidr} ]; then
     return
   fi
@@ -291,8 +308,20 @@ rewrite_rules() {
   if [ "${INTERFACE}" == "eth0" ]; then
     return
   fi
+
   ips=($(get_ipv4s))
+  if [ $? -gt 0 ]; then
+    # If we get an error fetching the list of IPs from IMDS,
+    # bail out early.
+    return
+  fi
   ip6s=($(get_ipv6s))
+  if [ $? -gt 0 ]; then
+    # If we get an error fetching the list of IPs from IMDS,
+    # bail out early.
+    return
+  fi
+
   if [ ${#ips[*]} -eq 0 ]; then
     remove_rules
     return
