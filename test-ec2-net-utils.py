@@ -231,7 +231,73 @@ class BasicENI(unittest.TestCase):
                 break
 
         log("Success")
-        self.assertTrue(result, "Failed to verify interface")    
+        self.assertTrue(result, "Failed to verify interface")
+
+    def test_add_remove_patchy_IMDS(self):
+        '''
+        Do a bunch of add/removes but with IMDS that frequently goes away for a bit
+        '''
+        imds_ip = "169.254.169.254"
+        rate_limit = '20/min'
+        instance = InstanceManipulator()
+        instance_id = instance.get_instance_id()
+        subnet_id = instance.get_subnet_id(instance_id)
+
+        result = True
+
+        # Rate limit things to IMDS so we test a bunch of the timeout and retries
+        subprocess.call(['iptables', '--new-chain', 'RATE-LIMIT'])
+        subprocess.call(['iptables', '--append', 'OUTPUT',
+                         '--destination', imds_ip,
+                         '--match', 'conntrack', '--ctstate', 'NEW',
+                         '--jump', 'RATE-LIMIT'])
+        subprocess.call(['iptables', '--append', 'RATE-LIMIT',
+                         '--match', 'limit', '--limit', rate_limit,
+                         '--limit-burst', '2',
+                         '--jump', 'ACCEPT'])
+        subprocess.call(['iptables', '--append', 'RATE-LIMIT',
+                         '--jump', 'REJECT'])
+        log("Rate limit connections to IMDS: {}".format(rate_limit))
+
+        # seed the rate limit, somewhat crudely.
+        for i in range(1,20):
+            subprocess.call(['curl', 'http://{}'.format(imds_ip)])
+
+
+        for i in range(1,4):
+            interface_id = instance.create_interface(subnet_id)
+            log("Iteration {} of try with patchy IMDS (rate limit through iptables)".format(i))
+            subprocess.call(['curl', 'http://{}'.format(imds_ip)])
+            try:
+                attachment = instance.attach_interface(interface_id, instance_id)
+            except botocore.exceptions.ClientError as e:
+                subprocess.call(['/sbin/iptables', '--flush'])
+                subprocess.call(['/sbin/iptables', '--delete-chain', 'RATE-LIMIT'])
+                self.assertTrue(instance.delete_interface(interface_id),
+                                "Failed deleting interface {} after attach failure".format(interface_id))
+                self.assertTrue(False, "Failed to attach interface: {}".format(e.response))
+        
+            # Now see if it comes up.
+            self.assertTrue(interface_id, "Failed creating interface")
+            self.assertTrue(attachment, "Failed to attach interface")
+
+            subprocess.call(['curl', 'http://{}'.format(imds_ip)])
+            result = verify_interface()
+
+
+            self.assertTrue(instance.detach_interface(attachment),
+                            "Failed detaching interface {}, attachment {}".format(interface_id, attachment))
+            self.assertTrue(instance.delete_interface(interface_id),
+                            "Failed deleting interface {}".format(interface_id))
+            if not result:
+                break
+
+        log("Re-enable normal IMDS access")
+        subprocess.call(['/sbin/iptables', '--flush'])
+        subprocess.call(['/sbin/iptables', '--delete-chain', 'RATE-LIMIT'])
+
+        log("Success")
+        self.assertTrue(result, "Failed to verify interface")
 
     def test_add_remove_many(self):
         '''
