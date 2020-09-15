@@ -125,9 +125,8 @@ class InstanceManipulator():
                 if tries == 0:
                     return False
 
-def verify_interface(interface_nr=1):
+def verify_interface(interface_nr=1, time_remaining=40):
     ip = None
-    time_remaining = 40
 
     while ip is None:
         process = subprocess.Popen(['/sbin/ifconfig', 'eth{}'.format(interface_nr)],
@@ -183,6 +182,56 @@ class BasicENI(unittest.TestCase):
                         "Failed deleting interface {}".format(interface_id))
 
         log("Success")
+
+    def test_add_remove_without_IMDS(self):
+        '''
+        Run a simple add/remove but make IMDS unavailable for a period of time.
+        '''
+        imds_ip = "169.254.169.254"
+        instance = InstanceManipulator()
+        instance_id = instance.get_instance_id()
+        subnet_id = instance.get_subnet_id(instance_id)
+
+        result = True
+
+        for i in range(1,4):
+            interface_id = instance.create_interface(subnet_id)
+            log("Iteration {} of try without IMDS".format(i))
+            try:
+                # Reject IMDS queries to fail fast (drop has a longer timeout)
+                subprocess.call(['/sbin/iptables', '-A', 'OUTPUT', '--destination', imds_ip, '-j', 'REJECT'])
+                log("REJECT packets to IMDS")
+                attachment = instance.attach_interface(interface_id, instance_id)
+            except botocore.exceptions.ClientError as e:
+                subprocess.call(['/sbin/iptables', '-D', 'OUTPUT', '--destination', imds_ip, '-j', 'REJECT'])
+                self.assertTrue(instance.delete_interface(interface_id),
+                                "Failed deleting interface {} after attach failure".format(interface_id))
+                self.assertTrue(False, "Failed to attach interface: {}".format(e.response))
+        
+            log("Check that interface does *NOT* come up...")
+
+            # Wait i*4 as somewhere between 4 and 12 seconds (for a 4 test iteration) should hit the right
+            # code path to ensure we do actually retry the imds token.
+            self.assertFalse(verify_interface(time_remaining=i*4), "Interface came up when it shouldn't have!")
+
+            # Now see if it comes up.
+            log("Re-enable packets to IMDS")
+            subprocess.call(['/sbin/iptables', '-D', 'OUTPUT', '--destination', imds_ip, '-j', 'REJECT'])
+
+            self.assertTrue(interface_id, "Failed creating interface")
+            self.assertTrue(attachment, "Failed to attach interface")
+
+            result = verify_interface()
+
+            self.assertTrue(instance.detach_interface(attachment),
+                            "Failed detaching interface {}, attachment {}".format(interface_id, attachment))
+            self.assertTrue(instance.delete_interface(interface_id),
+                            "Failed deleting interface {}".format(interface_id))
+            if not result:
+                break
+
+        log("Success")
+        self.assertTrue(result, "Failed to verify interface")    
 
     def test_add_remove_many(self):
         '''
