@@ -1,0 +1,1 @@
+default via fe80::4:3:2:1 dev eth2 table 10002

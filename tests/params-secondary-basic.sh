@@ -20,6 +20,8 @@ get_meta() {
 	local-ipv4s)
 	    echo "192.168.10.21"
 	    ;;
+	ipv4-prefix|ipv6-prefix)
+	    ;;
 	*)
 	    echo "unsupported request $1" >&2
 	    ;;

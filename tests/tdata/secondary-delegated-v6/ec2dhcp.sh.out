@@ -1,0 +1,15 @@
+CALLED get_meta local-ipv4s
+CALLED get_meta ipv4-prefix
+CALLED get_ipv6s
+CALLED get_meta ipv6-prefix
+CALLED ip -6 route show table 10002
+CALLED ip -6 route add default via fe80::4:3:2:1 dev eth2 table 10002
+CALLED logger --tag ec2net [rewrite_rules] Rewriting rules for eth2
+CALLED ip -4 rule list
+CALLED ip -4 rule add from 10.0.0.10 lookup 10002
+CALLED ip -6 rule list
+CALLED ip -6 rule add from fd02:ffff:eeee:1:2:3:2:1 lookup 10002
+CALLED ip -6 rule add from fd0a:ffff::/80 lookup 10002
+CALLED get_meta local-ipv4s
+CALLED logger --tag ec2net [remove_aliases] Removing aliases of eth2
+CALLED ip -4 addr flush dev eth2 secondary
