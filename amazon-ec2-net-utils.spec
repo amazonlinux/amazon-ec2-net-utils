@@ -90,6 +90,7 @@ rm -rf $RPM_BUILD_ROOT
 - Update Provides and Obsoletes to define an upgrade path from ec2-net-utils
 - Use upstream Makefile during install
 - Run upstream's test suite during check
+- Support IP prefix delegation
 
 * Mon Jul 13 2020 Frederick Lefebvre <fredlef@amazon.com> 1.4-2
 - Provides ec2-net-utils for backward compatibility

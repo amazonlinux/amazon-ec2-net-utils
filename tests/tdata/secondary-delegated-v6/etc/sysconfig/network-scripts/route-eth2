@@ -1,0 +1,3 @@
+default via 10.0.0.1 dev eth2 table 10002
+10.0.0.0/24 dev eth2 proto kernel scope link src 10.0.0.10 table 10002
+default via 10.0.0.1 dev eth2 metric 10002

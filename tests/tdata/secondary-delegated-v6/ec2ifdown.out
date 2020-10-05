@@ -1,0 +1,8 @@
+CALLED logger --tag ec2net [deactivate_primary] Deactivating eth2
+CALLED ifdown eth2
+CALLED logger --tag ec2net [unplug_interface] eth2 unplugged
+CALLED logger --tag ec2net [remove_rules] Removing rules for eth2
+CALLED ip -4 rule list
+CALLED ip -6 rule list
+CALLED logger --tag ec2net [remove_aliases] Removing aliases of eth2
+CALLED ip -4 addr flush dev eth2 secondary

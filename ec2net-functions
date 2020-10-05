@@ -161,6 +161,14 @@ get_secondary_ipv4s() {
   return $ec
 }
 
+get_delegated_prefix() {
+    local af=$1
+    local prefixes=($(get_meta "${af}-prefix"))
+    ec=$?
+    echo "${prefixes[@]}"
+    return $ec
+}
+
 get_ipv6s() {
   ip -6 addr list dev ${INTERFACE} scope global \
       | grep "inet6" \
@@ -361,12 +369,15 @@ rewrite_rules() {
     # bail out early.
     return
   fi
+  ips+=($(get_delegated_prefix ipv4))
+
   ip6s=($(get_ipv6s))
   if [ $? -gt 0 ]; then
     # If we get an error fetching the list of IPs from IMDS,
     # bail out early.
     return
   fi
+  ip6s+=($(get_delegated_prefix ipv6))
 
   if [ ${#ips[*]} -eq 0 ]; then
     remove_rules
