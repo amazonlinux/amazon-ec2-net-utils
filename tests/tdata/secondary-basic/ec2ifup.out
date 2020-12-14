@@ -1,0 +1,8 @@
+CALLED logger --tag ec2net [plug_interface] eth1 plugged
+CALLED logger --tag ec2net [rewrite_primary] Rewriting configs for eth1
+CALLED get_meta subnet-ipv4-cidr-block
+CALLED get_meta local-ipv4s
+CALLED logger --tag ec2net [rewrite_primary] adding default route to main table for eth1
+CALLED rm -f ./test-output/secondary-basic/etc/sysconfig/network-scripts/route6-eth1
+CALLED logger --tag ec2net [activate_primary] Activating eth1
+CALLED ifup eth1

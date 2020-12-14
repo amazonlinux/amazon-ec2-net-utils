@@ -28,6 +28,12 @@ test -d $2 || install -d -o root -g root -m755 $2
 install -o root -g root -m755 $1 $2
 endef
 
+CLEANFILES:=
+
+TOPDIR=${CURDIR}
+TESTDIR=${TOPDIR}/tests
+include ${TESTDIR}/Makefile
+
 sources:
 	git archive --format tar.gz --prefix ${pkgname}-${version}/ HEAD > ../${pkgname}-${version}.tar.gz
 
@@ -52,3 +58,7 @@ install:
 	${call install-file,ec2ifscan.8,${mandir}/man8}
 	${call install-file,ec2ifup.8,${mandir}/man8}
 	ln -fs ec2ifup.8 ${mandir}/man8/ec2ifdown.8
+
+.PHONY: clean
+clean:
+	rm -rf ${CLEANFILES}

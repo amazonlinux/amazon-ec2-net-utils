@@ -1,0 +1,5 @@
+CALLED logger --tag ec2net [deactivate_primary] Deactivating eth0
+CALLED ifdown eth0
+CALLED logger --tag ec2net [unplug_interface] eth0 unplugged
+CALLED logger --tag ec2net [remove_aliases] Removing aliases of eth0
+CALLED ip -4 addr flush dev eth0 secondary

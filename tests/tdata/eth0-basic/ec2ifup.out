@@ -1,0 +1,3 @@
+CALLED logger --tag ec2net [plug_interface] eth0 plugged
+CALLED logger --tag ec2net [activate_primary] Activating eth0
+CALLED ifup eth0

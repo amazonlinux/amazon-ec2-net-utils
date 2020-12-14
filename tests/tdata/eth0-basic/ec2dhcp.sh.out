@@ -1,0 +1,4 @@
+CALLED get_meta local-ipv4s
+CALLED logger --tag ec2net [rewrite_aliases] Rewriting aliases of eth0
+CALLED get_meta subnet-ipv4-cidr-block
+CALLED ip -4 addr list dev eth0 secondary

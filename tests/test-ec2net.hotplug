@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the MIT License. See the LICENSE accompanying this file
+# for the specific language governing permissions and limitations under
+# the License.
+
+# During init and before the network service is started, metadata is not
+# available. Exit without attempting to configure the elastic interface.
+if [ ! -f /var/lock/subsys/network ]; then
+  exit
+fi
+if [ -f /dev/.in_sysinit ]; then
+  exit
+fi
+
+. /etc/sysconfig/network-scripts/ec2net-functions
+
+case $ACTION in
+  add)
+    plug_interface
+    ;;
+  remove)
+    unplug_interface
+    ;;
+esac

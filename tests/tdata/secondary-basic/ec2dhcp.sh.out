@@ -1,0 +1,13 @@
+CALLED get_meta local-ipv4s
+CALLED get_ipv6s
+CALLED ip -6 route show table 10001
+CALLED ip -6 route add default via fe80::4:3:2:1 dev eth1 table 10001
+CALLED logger --tag ec2net [rewrite_rules] Rewriting rules for eth1
+CALLED ip -4 rule list
+CALLED ip -4 rule add from 192.168.10.21 lookup 10001
+CALLED ip -6 rule list
+CALLED ip -6 rule add from fd01:ffff:eeee:dddd:4:3:2:1 lookup 10001
+CALLED get_meta local-ipv4s
+CALLED logger --tag ec2net [rewrite_aliases] Rewriting aliases of eth1
+CALLED get_meta subnet-ipv4-cidr-block
+CALLED ip -4 addr list dev eth1 secondary

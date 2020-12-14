@@ -1,0 +1,82 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the MIT License. See the LICENSE accompanying this file
+# for the specific language governing permissions and limitations under
+# the License.
+
+# This file contains redefinitions of various shell commands or
+# functions defined in ec2net-functions.  This facilitates testing of
+# various scenarios without relying on mutating behavior.
+
+# On a standard system, we can rely on directories such as
+# /etc/sysconfig/network to exist, but when testing with an alternate
+# /etc location, this may not be the case.  Create the necessary
+# directories here, based on the files used in ec2net-functions.
+
+for f in "$config_file" "$dhclient_file" "$route6_file" "$route_file"; do
+    mkdir -p $(dirname "$f")
+done
+
+# Redefine the shell wrapper functions for the various interface
+# management and system tools we invoke in ec2net-functions:
+function ip() {
+    echo "CALLED $FUNCNAME $@" >&2
+}
+
+function ifup() {
+    echo "CALLED $FUNCNAME" $@ >&2
+}
+
+function ifdown() {
+    echo "CALLED $FUNCNAME" $@ >&2
+}
+
+function logger() {
+    echo "CALLED $FUNCNAME" $@ >&2
+}
+
+function rm() {
+    echo "CALLED $FUNCNAME" $@ >&2
+    command "$FUNCNAME" $@
+}
+
+# Return some pre-defined values for various instance metadata values.
+# Values for keys not explicitly defined here will be empty, and we
+# will log a message to stderr indicating so.
+get_meta() {
+    echo "CALLED $FUNCNAME" $@ >&2
+    case "$1" in
+	subnet-ipv4-cidr-block)
+	    echo "192.168.10.0/24"
+	    ;;
+	ipv4-prefix)
+	    echo "10.10.100.0/24"
+	    ;;
+	ipv6-prefix)
+	    echo "fd00:80db:1:2:3:4::/80"
+	    ;;
+	local-ipv4s)
+	    echo "192.168.10.20"
+	    echo "192.168.10.21"
+	    ;;
+	*)
+	    echo "unsupported request $1" >&2
+	    ;;
+    esac
+}
+
+get_ipv6_gateway() {
+    echo "fe80::4:3:2:1"
+}
+
+
+# ec2net-functions defines the get_ipv6s() function to query the
+# interface configuration itself, rather than IMDS, so we need to
+# provide the results directly rather than use the get_meta()
+# function.
+[ ! -v _TEST_IPV6_ADDRS ] &&
+    _TEST_IPV6_ADDRS=()
+get_ipv6s() {
+    echo "CALLED get_ipv6s" >&2
+    echo ${_TEST_IPV6_ADDRS[@]} | tr ' ' '\n'
+}
