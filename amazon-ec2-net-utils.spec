@@ -43,6 +43,9 @@ interfaces.
 make install DESTDIR=%{buildroot} prefix=/usr udevdir=%{buildroot}/%{_udevrulesdir}
 mv %{buildroot}/%{_mandir}/man8/ec2ifdown.8 %{buildroot}/%{_mandir}/man8/ec2ifdown.8.gz
 
+%check
+make test
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -85,6 +88,7 @@ rm -rf $RPM_BUILD_ROOT
 * Mon Dec 14 2020 Noah Meyerhans <nmeyerha@amazon.com> 1.5-1.amzn2
 - Update Provides and Obsoletes to define an upgrade path from ec2-net-utils
 - Use upstream Makefile during install
+- Run upstream's test suite during check
 
 * Mon Jul 13 2020 Frederick Lefebvre <fredlef@amazon.com> 1.4-2
 - Provides ec2-net-utils for backward compatibility
