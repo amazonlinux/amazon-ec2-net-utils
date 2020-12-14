@@ -18,11 +18,17 @@ if [ -z "${INTERFACE}" ]; then
   exit
 fi
 
-HWADDR=$(cat /sys/class/net/${INTERFACE}/address 2>/dev/null)
+# Support alternate locations for config files in order to facilitate
+# testing.
+ETCDIR=${ETCDIR:-/etc}
+SYSFSDIR=${SYSFSDIR:-/sys}
+
+HWADDR=$(cat "${SYSFSDIR}"/class/net/${INTERFACE}/address 2>/dev/null)
 while test "${HWADDR}" = "00:00:00:00:00:00"; do
   sleep 0.1
-  HWADDR=$(cat /sys/class/net/${INTERFACE}/address 2>/dev/null)
+  HWADDR=$(cat "${SYSFSDIR}"/class/net/${INTERFACE}/address 2>/dev/null)
 done
+
 
 if [ -z "${HWADDR}" ] && [ "${ACTION}" != "remove" ]; then
   exit
@@ -36,12 +42,32 @@ let RTABLE+=10000
 METADATA_BASEURL="http://169.254.169.254/latest"
 METADATA_MAC_PATH="meta-data/network/interfaces/macs"
 METADATA_TOKEN_PATH="api/token"
-config_file="/etc/sysconfig/network-scripts/ifcfg-${INTERFACE}"
-route_file="/etc/sysconfig/network-scripts/route-${INTERFACE}"
-route6_file="/etc/sysconfig/network-scripts/route6-${INTERFACE}"
-dhclient_file="/etc/dhcp/dhclient-${INTERFACE}.conf"
+config_file="$ETCDIR/sysconfig/network-scripts/ifcfg-${INTERFACE}"
+route_file="$ETCDIR/sysconfig/network-scripts/route-${INTERFACE}"
+route6_file="$ETCDIR/sysconfig/network-scripts/route6-${INTERFACE}"
+dhclient_file="$ETCDIR/dhcp/dhclient-${INTERFACE}.conf"
 MAINROUTETABLE="yes"
 
+
+function ip() {
+    command "$FUNCNAME" $@
+}
+
+function ifup() {
+    command "$FUNCNAME" $@
+}
+
+function ifdown() {
+    command "$FUNCNAME" $@
+}
+
+function logger() {
+    command "$FUNCNAME" $@
+}
+
+function rm() {
+    command "$FUNCNAME" $@
+}
 
 if [ -s ${config_file} ]; then
   # make no changes to unmanaged interfaces
@@ -136,7 +162,7 @@ get_secondary_ipv4s() {
 }
 
 get_ipv6s() {
-  /sbin/ip -6 addr list dev ${INTERFACE} scope global \
+  ip -6 addr list dev ${INTERFACE} scope global \
       | grep "inet6" \
       | awk '{print $2}' | cut -d/ -f1
 }
@@ -178,7 +204,7 @@ get_ipv6_gateway() {
         logger --tag ec2net "[get_ipv6_gateway] Failed to receive router advertisement"
         return
       fi
-      gateway6=$(/sbin/ip -6 route show dev "${INTERFACE}" | grep ^default | awk '{print $3}')
+      gateway6=$(ip -6 route show dev "${INTERFACE}" | grep ^default | awk '{print $3}')
       if [ -n "${gateway6}" ]; then
         break
       else
@@ -266,7 +292,7 @@ EOF
 
 remove_aliases() {
   logger --tag ec2net "[remove_aliases] Removing aliases of ${INTERFACE}"
-  /sbin/ip -4 addr flush dev ${INTERFACE} secondary
+  ip -4 addr flush dev ${INTERFACE} secondary
 }
 
 rewrite_aliases() {
@@ -290,7 +316,7 @@ rewrite_aliases() {
   # add it to the interface otherwise. Then, remove any address
   # remaining in the stale list.
   declare -A secondaries
-  for secondary in $(/sbin/ip -4 addr list dev ${INTERFACE} secondary \
+  for secondary in $(ip -4 addr list dev ${INTERFACE} secondary \
                      |grep "inet .* secondary ${INTERFACE}" \
                      |awk '{print $2}'|cut -d/ -f1); do
     secondaries[${secondary}]=1
@@ -299,11 +325,11 @@ rewrite_aliases() {
     if [[ ${secondaries[${alias}]} ]]; then
       unset secondaries[${alias}]
     else
-      /sbin/ip -4 addr add ${alias}/${PREFIX} brd + dev ${INTERFACE}
+      ip -4 addr add ${alias}/${PREFIX} brd + dev ${INTERFACE}
     fi
   done
   for secondary in "${!secondaries[@]}"; do
-    /sbin/ip -4 addr del ${secondary}/${PREFIX} dev ${INTERFACE}
+    ip -4 addr del ${secondary}/${PREFIX} dev ${INTERFACE}
   done
 }
 
@@ -312,15 +338,15 @@ remove_rules() {
     return
   fi
   logger --tag ec2net "[remove_rules] Removing rules for ${INTERFACE}"
-  for rule in $(/sbin/ip -4 rule list \
+  for rule in $(ip -4 rule list \
                 |grep "from .* lookup ${RTABLE}" \
                 |awk -F: '{print $1}'); do
-    /sbin/ip -4 rule delete pref "${rule}"
+    ip -4 rule delete pref "${rule}"
   done
-  for rule in $(/sbin/ip -6 rule list \
+  for rule in $(ip -6 rule list \
                 |grep "from .* lookup ${RTABLE}" \
                 |awk -F: '{print $1}'); do
-    /sbin/ip -6 rule delete pref "${rule}"
+    ip -6 rule delete pref "${rule}"
   done
 }
 
@@ -348,11 +374,11 @@ rewrite_rules() {
   fi
   # This is the part we would do in rewrite_primary() if we knew
   # the gateway address.
-  if [ ${#ip6s[*]} -gt 0 -a -z "$(/sbin/ip -6 route show table ${RTABLE})" ]; then
+  if [ ${#ip6s[*]} -gt 0 -a -z "$(ip -6 route show table ${RTABLE})" ]; then
     gateway6=$(get_ipv6_gateway)
     # Manually add the route, then add it to ${route6_file} so it
     # gets brought down with the rest of the interface.
-    /sbin/ip -6 route add default via ${gateway6} dev ${INTERFACE} table ${RTABLE}
+    ip -6 route add default via ${gateway6} dev ${INTERFACE} table ${RTABLE}
     cat <<- EOF > ${route6_file}
 	default via ${gateway6} dev ${INTERFACE} table ${RTABLE}
 EOF
@@ -365,7 +391,7 @@ EOF
   # outbound traffic from that IP to the interface route table.
   # Then, remove all other rules found in the stale list.
   declare -A rules
-  for rule in $(/sbin/ip -4 rule list \
+  for rule in $(ip -4 rule list \
                 |grep "from .* lookup ${RTABLE}" \
                 |awk '{print $1$3}'); do
     split=(${rule//:/ })
@@ -375,15 +401,15 @@ EOF
     if [[ ${rules[${ip}]} ]]; then
       unset rules[${ip}]
     else
-      /sbin/ip -4 rule add from ${ip} lookup ${RTABLE}
+      ip -4 rule add from ${ip} lookup ${RTABLE}
     fi
   done
   for rule in "${!rules[@]}"; do
-    /sbin/ip -4 rule delete pref "${rules[${rule}]}"
+    ip -4 rule delete pref "${rules[${rule}]}"
   done
   # Now do the same, but for IPv6
   declare -A rules6
-  for rule in $(/sbin/ip -6 rule list \
+  for rule in $(ip -6 rule list \
                 |grep "from .* lookup ${RTABLE}" \
                 |awk '{print $1$3}'); do
     split=(${rule/:/ }) # take care to only replace the first :
@@ -393,11 +419,11 @@ EOF
     if [[ ${rules6[${ip}]} ]]; then
       unset rules6[${ip}]
     else
-      /sbin/ip -6 rule add from ${ip} lookup ${RTABLE}
+      ip -6 rule add from ${ip} lookup ${RTABLE}
     fi
   done
   for rule in "${!rules6[@]}"; do
-    /sbin/ip -6 rule delete pref "${rules6[${rule}]}"
+    ip -6 rule delete pref "${rules6[${rule}]}"
   done
 }
 
@@ -414,10 +440,10 @@ unplug_interface() {
 
 activate_primary() {
   logger --tag ec2net "[activate_primary] Activating ${INTERFACE}"
-  /sbin/ifup ${INTERFACE}
+  ifup ${INTERFACE}
 }
 
 deactivate_primary() {
   logger --tag ec2net "[deactivate_primary] Deactivating ${INTERFACE}"
-  /sbin/ifdown ${INTERFACE}
+  ifdown ${INTERFACE}
 }
