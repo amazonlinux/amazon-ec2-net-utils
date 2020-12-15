@@ -10,28 +10,14 @@ Version:   1.5
 Release:   1%{?dist}
 License:   MIT and GPLv2
 Group:     System Tools
-Source0:   53-ec2-network-interfaces.rules.systemd
-Source1:   53-ec2-network-interfaces.rules.upstart
-Source2:   75-persistent-net-generator.rules
-Source3:   ec2net-functions
-Source4:   ec2net.hotplug
-Source5:   ec2ifup
-Source6:   ec2ifdown
-Source7:   ec2dhcp.sh
-Source8:   ec2ifup.8
-Source9:   ec2ifscan
-Source10:  ec2ifscan.8
-Source11:  ixgbevf.conf
-Source12:  elastic-network-interfaces.conf
-Source13:  ec2net-scan.service
-Source14:  write_net_rules
-Source15:  rule_generator.functions
-Source16:  ec2net-ifup@.service
+
+Source:    amazon-ec2-net-utils-%{version}.tar.gz
 
 URL:       https://github.com/aws/amazon-ec2-net-utils
 BuildArch: noarch
 Requires:  curl
 Requires:  iproute
+BuildRequires: make
 %if %{systemd}
 %{?systemd_requires}
 BuildRequires: systemd-units
@@ -48,46 +34,14 @@ interfaces.
 
 %prep
 
+%setup -q
+
 %build
 
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/udev/rules.d/
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/network-scripts/
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/dhcp/dhclient.d/
-mkdir -p $RPM_BUILD_ROOT%{_mandir}/man8/
 
-install -m644 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/udev/rules.d/
-install -m644 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/network-scripts/
-install -m755 %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/network-scripts/
-install -m755 %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/dhcp/dhclient.d/
-%if %{systemd}
-install -d -m755 $RPM_BUILD_ROOT%{_sbindir}
-install -m755 %{SOURCE5} $RPM_BUILD_ROOT%{_sbindir}/
-install -m755 %{SOURCE6} $RPM_BUILD_ROOT%{_sbindir}/
-install -m755 %{SOURCE9} $RPM_BUILD_ROOT%{_sbindir}/
-install -m644 %{SOURCE0} $RPM_BUILD_ROOT%{_sysconfdir}/udev/rules.d/53-ec2-network-interfaces.rules
-install -d -m755 $RPM_BUILD_ROOT%{_unitdir}
-install -m644 %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/ec2net-scan.service
-install -m644 %{SOURCE16} $RPM_BUILD_ROOT%{_unitdir}/ec2net-ifup@.service
-install -d -m755 $RPM_BUILD_ROOT/usr/lib/udev
-install -m644 %{SOURCE14} $RPM_BUILD_ROOT/usr/lib/udev
-install -m644 %{SOURCE15} $RPM_BUILD_ROOT/usr/lib/udev
-%else
-install -d -m755 $RPM_BUILD_ROOT/sbin
-install -m755 %{SOURCE5} $RPM_BUILD_ROOT/sbin/
-install -m755 %{SOURCE6} $RPM_BUILD_ROOT/sbin/
-install -m755 %{SOURCE9} $RPM_BUILD_ROOT/sbin/
-install -m644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/udev/rules.d/53-ec2-network-interfaces.rules
-install -d -m755 $RPM_BUILD_ROOT%{_sysconfdir}/init
-install -m644 %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/init
-%endif # systemd
-install -m644 %{SOURCE8} $RPM_BUILD_ROOT%{_mandir}/man8/ec2ifup.8
-ln -s ./ec2ifup.8.gz $RPM_BUILD_ROOT%{_mandir}/man8/ec2ifdown.8.gz
-install -m644 %{SOURCE10} $RPM_BUILD_ROOT%{_mandir}/man8/ec2ifscan.8
-
-# add module configs
-install -m644 -D %{SOURCE11} $RPM_BUILD_ROOT/etc/modprobe.d/ixgbevf.conf
+make install DESTDIR=%{buildroot} prefix=/usr udevdir=%{buildroot}/%{_udevrulesdir}
+mv %{buildroot}/%{_mandir}/man8/ec2ifdown.8 %{buildroot}/%{_mandir}/man8/ec2ifdown.8.gz
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -128,8 +82,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
-* Mon Oct  5 2020 Noah Meyerhans <nmeyerha@amazon.com> 1.5-1
+* Mon Dec 14 2020 Noah Meyerhans <nmeyerha@amazon.com> 1.5-1.amzn2
 - Update Provides and Obsoletes to define an upgrade path from ec2-net-utils
+- Use upstream Makefile during install
 
 * Mon Jul 13 2020 Frederick Lefebvre <fredlef@amazon.com> 1.4-2
 - Provides ec2-net-utils for backward compatibility
