@@ -296,7 +296,7 @@ remove_aliases() {
 }
 
 rewrite_aliases() {
-  aliases=$(get_secondary_ipv4s)
+  aliases=($(get_secondary_ipv4s))
   if [ ${#aliases[*]} -eq 0 ]; then
     remove_aliases
     return
