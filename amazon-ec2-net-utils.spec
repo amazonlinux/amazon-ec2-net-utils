@@ -9,15 +9,15 @@ Summary:   A set of network tools for managing ENIs
 Version:   1.5
 Release:   1%{?dist}
 License:   MIT and GPLv2
-Group:     System Tools
 
-Source:    amazon-ec2-net-utils-%{version}.tar.gz
+Source:    https://github.com/aws/amazon-ec2-net-utils/archive/%{version}.tar.gz
 
 URL:       https://github.com/aws/amazon-ec2-net-utils
 BuildArch: noarch
 Requires:  curl
 Requires:  iproute
 BuildRequires: make
+BuildRequires: systemd
 %if %{systemd}
 %{?systemd_requires}
 BuildRequires: systemd-units
@@ -60,12 +60,13 @@ rm -rf $RPM_BUILD_ROOT
 %endif # systemd
 
 %files
-%{_sysconfdir}/udev/rules.d/53-ec2-network-interfaces.rules
-%{_sysconfdir}/udev/rules.d/75-persistent-net-generator.rules
-%{_sysconfdir}/modprobe.d/ixgbevf.conf
-%{_sysconfdir}/sysconfig/network-scripts/ec2net-functions
+%{_udevrulesdir}/53-ec2-network-interfaces.rules
+%{_udevrulesdir}/75-persistent-net-generator.rules
+%config(noreplace) %{_sysconfdir}/modprobe.d/ixgbevf.conf
+%config(noreplace) %{_sysconfdir}/sysconfig/network-scripts/ec2net-functions
 %{_sysconfdir}/sysconfig/network-scripts/ec2net.hotplug
 %{_sysconfdir}/dhcp/dhclient.d/ec2dhcp.sh
+
 %if %{systemd}
 %{_sbindir}/ec2ifup
 %{_sbindir}/ec2ifdown
