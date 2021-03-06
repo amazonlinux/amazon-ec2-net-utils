@@ -84,33 +84,27 @@ if [ -s ${config_file} ]; then
 fi
 
 get_meta() {
-  logger --tag ec2net "[get_meta] Getting token for IMDSv2"
+  logger --tag ec2net "[get_meta] Querying IMDS for ${METADATA_MAC_PATH}/${HWADDR}/${1}"
+  logger --tag ec2net "[get_meta] Getting token for IMDSv2."
 
   # IMDS may have become temporarily unreachable, retry
-  attempts=60
+  max_attempts=60
+  attempts=${max_attempts}
   imds_exitcode=1
   while [ "${imds_exitcode}" -gt 0 ]; do
     if [ "${attempts}" -eq 0 ]; then
-      logger --tag ec2net "[get_meta] Failed to get IMDSv2 metadata token"
+      logger --tag ec2net "[get_meta] Failed to get IMDSv2 metadata token after ${max_attempts} attempts... Aborting"
       return $imds_exitcode
     fi
 
     imds_token=$(curl -s -f -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${METADATA_BASEURL}/${METADATA_TOKEN_PATH})
     imds_exitcode=$?
     if [ "${imds_exitcode}" -gt 0 ]; then
-	logger --tag ec2net "[get_meta] Failed to get IMDSv2 token from ${METADATA_BASEURL}/${METADATA_TOKEN_PATH}"
-	logger --tag ec2net "[get_meta] Retrying... ${attempts} remaining"
 	let attempts--
 	sleep 0.5
 	imds_exitcode=1
     fi
   done
-
-  if [ "${imds_exitcode}" -gt 0 ]; then
-      logger --tag ec2net "[get_meta] Failed to get IMDSv2 token from ${METADATA_BASEURL}/${METADATA_TOKEN_PATH}"
-      logger --tag ec2net "[get_meta] Aborting!"
-      return $imds_exitcode
-  fi
 
   # IMDS can take up to 30s to provide the information of a new ENI
   attempts=60
@@ -367,6 +361,7 @@ rewrite_rules() {
   if [ $? -gt 0 ]; then
     # If we get an error fetching the list of IPs from IMDS,
     # bail out early.
+    logger --tag ec2net "[rewrite_rules] Could not get IPv4 addresses for ${INTERFACE} from IMDS. Aborting"
     return
   fi
   ips+=($(get_delegated_prefix ipv4))
@@ -375,6 +370,7 @@ rewrite_rules() {
   if [ $? -gt 0 ]; then
     # If we get an error fetching the list of IPs from IMDS,
     # bail out early.
+    logger --tag ec2net "[rewrite_rules] Could not get IPv6 addresses for ${INTERFACE} from IMDS. Aborting"
     return
   fi
   ip6s+=($(get_delegated_prefix ipv6))
