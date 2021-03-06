@@ -299,6 +299,10 @@ remove_aliases() {
 
 rewrite_aliases() {
   aliases=($(get_secondary_ipv4s))
+  if [ $? -gt 0 ]; then
+    logger --tag ec2net "[rewrite_aliases] Failed to get secondary IPs from IMDS. Aborting"
+    return
+  fi
   if [ ${#aliases[*]} -eq 0 ]; then
     remove_aliases
     return
