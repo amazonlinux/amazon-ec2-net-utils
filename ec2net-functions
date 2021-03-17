@@ -117,6 +117,10 @@ get_meta() {
     logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
     meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
     imds_exitcode=$?
+    # Temporary hack to avoid retries on prefix delegation keys that don't actually exist yet:
+    if [[ "$1" = *-prefix ]]; then
+        break
+    fi
     if [ "${imds_exitcode}" -gt 0 ]; then
       let attempts--
       sleep 0.5
