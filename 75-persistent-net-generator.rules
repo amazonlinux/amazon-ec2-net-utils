@@ -13,8 +13,8 @@ NAME=="?*", GOTO="persistent_net_generator_end"
 # do not create rule for eth0
 ENV{INTERFACE}=="eth0", GOTO="persistent_net_generator_end"
 
-# do not create rule for VLAN interfaces (e.g. eth1.1)
-ENV{INTERFACE}=="eth*.*", GOTO="persistent_net_generator_end"
+# skip interfaces not supported by ec2-net-utils (e.g. VLAN)
+ENV{ID_NET_DRIVER}!="vif|ena", GOTO="persistent_net_generator_end"
 
 # read MAC address
 ENV{MATCHADDR}="$attr{address}"
