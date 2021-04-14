@@ -13,6 +13,9 @@ NAME=="?*", GOTO="persistent_net_generator_end"
 # do not create rule for eth0
 ENV{INTERFACE}=="eth0", GOTO="persistent_net_generator_end"
 
+# only create rules for vif|ena devices (e.g. skip VLAN)
+ENV{ID_NET_DRIVER}!="vif|ena", GOTO="persistent_net_generator_end"
+
 # read MAC address
 ENV{MATCHADDR}="$attr{address}"
 
