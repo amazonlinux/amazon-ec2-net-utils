@@ -20,6 +20,7 @@ get_meta() {
 	local-ipv4s)
 	    echo "192.168.10.21"
 	    echo "192.168.10.22"
+	    echo "192.168.10.23"
 	    ;;
 	ipv4-prefix)
 	    echo "172.16.1.0/24"

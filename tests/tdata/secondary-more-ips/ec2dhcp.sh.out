@@ -8,6 +8,7 @@ CALLED logger --tag ec2net [rewrite_rules] Rewriting rules for eth2
 CALLED ip -4 rule list
 CALLED ip -4 rule add from 192.168.10.21 lookup 10002
 CALLED ip -4 rule add from 192.168.10.22 lookup 10002
+CALLED ip -4 rule add from 192.168.10.23 lookup 10002
 CALLED ip -4 rule add from 172.16.1.0/24 lookup 10002
 CALLED ip -6 rule list
 CALLED ip -6 rule add from fd01:ffff:eeee:5:4:3:2:1 lookup 10002
@@ -18,3 +19,4 @@ CALLED logger --tag ec2net [rewrite_aliases] Rewriting aliases of eth2
 CALLED get_meta subnet-ipv4-cidr-block
 CALLED ip -4 addr list dev eth2 secondary
 CALLED ip -4 addr add 192.168.10.22/24 brd + dev eth2
+CALLED ip -4 addr add 192.168.10.23/24 brd + dev eth2
