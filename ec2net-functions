@@ -327,7 +327,7 @@ rewrite_aliases() {
                      |awk '{print $2}'|cut -d/ -f1); do
     secondaries[${secondary}]=1
   done
-  for alias in ${aliases}; do
+  for alias in ${aliases[@]}; do
     if [[ ${secondaries[${alias}]} ]]; then
       unset secondaries[${alias}]
     else
