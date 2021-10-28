@@ -1,0 +1,5 @@
+amazon-ec2-net-utils (2.0.0-1~1) unstable; urgency=medium
+
+  * Initial release
+
+ -- Noah Meyerhans <nmeyerha@amazon.com>  Mon, 09 Aug 2021 18:10:49 -0700

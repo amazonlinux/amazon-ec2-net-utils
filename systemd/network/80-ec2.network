@@ -1,0 +1,13 @@
+[Match]
+Driver=ena ixgbevf vif
+
+[Link]
+MTUBytes=9001
+
+[Network]
+DHCP=yes
+IPv6DuplicateAddressDetection=0
+LLMNR=no
+
+[DHCPv4]
+UseHostname=no

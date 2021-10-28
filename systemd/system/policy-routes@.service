@@ -1,0 +1,17 @@
+[Unit]
+Description=Set up policy routes for %I
+StartLimitIntervalSec=10
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+PrivateTmp=yes
+AmbientCapabilities=CAP_NET_ADMIN
+NoNewPrivileges=yes
+User=root
+Environment="EC2_IF_INITIAL_SETUP=true"
+ExecStart=/usr/bin/setup-policy-routes %i start
+ExecStop=/usr/bin/setup-policy-routes %i stop
+Restart=on-failure
+RestartSec=1

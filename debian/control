@@ -1,0 +1,16 @@
+Source: amazon-ec2-net-utils
+Section: net
+Priority: optional
+Maintainer: Noah Meyerhans <nmeyerha@amazon.com>
+Build-Depends: debhelper-compat (= 12)
+Standards-Version: 4.4.1
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Browser: https://salsa.debian.org/debian/amazon-ec2-net-utils
+#Vcs-Git: https://salsa.debian.org/debian/amazon-ec2-net-utils.git
+
+Package: amazon-ec2-net-utils
+Architecture: all
+Depends: systemd, udev, curl, iproute2, bash, ${shlibs:Depends}, ${misc:Depends}
+Description: utilities for managing network interfaces in Amazon EC2
+ amazon-ec2-net-utils provides udev integration and helper utilities
+ to manage network configuration in the Amazon EC2 cloud environment

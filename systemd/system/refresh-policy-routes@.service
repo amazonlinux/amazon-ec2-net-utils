@@ -1,0 +1,11 @@
+[Unit]
+Description=Set up policy routes for %I
+
+[Service]
+Type=oneshot
+PrivateTmp=yes
+AmbientCapabilities=CAP_NET_ADMIN
+NoNewPrivileges=yes
+User=root
+ExecStart=/usr/bin/setup-policy-routes %i start
+SuccessExitStatus=SIGTERM
