@@ -1,0 +1,30 @@
+version: 2.1
+
+jobs:
+  code-checks:
+    docker:
+      - image: public.ecr.aws/debian/debian:11
+    steps:
+      - checkout
+      - run:
+          name: "Install dependencies"
+          command: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install shellcheck"
+      - run:
+          name: "shellcheck"
+          command: "shellcheck -s bash -S error ec2dhcp.sh ec2ifdown ec2ifup ec2ifscan ec2net-functions write_net_rules"
+  tests:
+    docker:
+      - image: public.ecr.aws/debian/debian:11
+    steps:
+      - checkout
+      - run:
+          name: "Install dependencies"
+          command: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install make"
+      - run:
+          command: "make test"
+
+workflows:
+  ci-workflow:
+    jobs:
+      - code-checks
+      - tests
