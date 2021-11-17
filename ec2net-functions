@@ -50,23 +50,23 @@ MAINROUTETABLE="yes"
 
 
 function ip() {
-    command "$FUNCNAME" $@
+    command "$FUNCNAME" "$@"
 }
 
 function ifup() {
-    command "$FUNCNAME" $@
+    command "$FUNCNAME" "$@"
 }
 
 function ifdown() {
-    command "$FUNCNAME" $@
+    command "$FUNCNAME" "$@"
 }
 
 function logger() {
-    command "$FUNCNAME" $@
+    command "$FUNCNAME" "$@"
 }
 
 function rm() {
-    command "$FUNCNAME" $@
+    command "$FUNCNAME" "$@"
 }
 
 if [ -s ${config_file} ]; then
@@ -200,7 +200,7 @@ get_ipv6_gateway() {
     quibbles[1]=$(( 0x${octets[2]}ff ))
     quibbles[2]=$(( 0xfe00 + 0x${octets[3]} ))
     quibbles[3]=$(( (0x${octets[4]} << 8) + 0x${octets[5]} ))
-    printf "fe80::%04x:%04x:%04x:%04x\n" ${quibbles[@]}
+    printf "fe80::%04x:%04x:%04x:%04x\n" "${quibbles[@]}"
   else
     logger --tag ec2net "[get_ipv6_gateway] Waiting for IPv6 router advertisement"
     attempts=20
@@ -330,7 +330,7 @@ rewrite_aliases() {
                      |awk '{print $2}'|cut -d/ -f1); do
     secondaries[${secondary}]=1
   done
-  for alias in ${aliases[@]}; do
+  for alias in "${aliases[@]}"; do
     if [[ ${secondaries[${alias}]} ]]; then
       unset secondaries[${alias}]
     else
@@ -411,7 +411,7 @@ EOF
     split=(${rule//:/ })
     rules[${split[1]}]=${split[0]}
   done
-  for ip in ${ips[@]}; do
+  for ip in "${ips[@]}"; do
     if [[ ${rules[${ip}]} ]]; then
       unset rules[${ip}]
     else
@@ -429,7 +429,7 @@ EOF
     split=(${rule/:/ }) # take care to only replace the first :
     rules6[${split[1]}]=${split[0]}
   done
-  for ip in ${ip6s[@]}; do
+  for ip in "${ip6s[@]}"; do
     if [[ ${rules6[${ip}]} ]]; then
       unset rules6[${ip}]
     else
