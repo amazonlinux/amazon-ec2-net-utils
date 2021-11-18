@@ -22,9 +22,29 @@ jobs:
           command: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install make"
       - run:
           command: "make test"
+  al2-rpm-scratch:
+    docker:
+      - image: public.ecr.aws/amazonlinux/amazonlinux:2
+    steps:
+      - checkout
+      - run:
+          name: "Install dependencies"
+          command: "yum -y install rpm-build make systemd-units git"
+      - run:
+          name: "Repack sources"
+          command: |
+            v=$(rpmspec -q --qf "%{version}" amazon-ec2-net-utils.spec)
+            make scratch-sources
+            mkdir ../amazon-ec2-net-utils-${v}
+            zcat ../amazon-ec2-net-utils*.tar.gz | tar -C ../amazon-ec2-net-utils-${v} -xf - --strip-components=2
+            tar cvzf ${v}.tar.gz ../amazon-ec2-net-utils-${v}
+      - run:
+          name: "rpmbuild"
+          command: rpmbuild --define "_sourcedir $PWD" -bb amazon-ec2-net-utils.spec
 
 workflows:
   ci-workflow:
     jobs:
       - code-checks
       - tests
+      - al2-rpm-scratch
