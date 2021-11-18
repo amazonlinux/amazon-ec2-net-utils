@@ -5,7 +5,7 @@
 # the License.
 
 pkgname=amazon-ec2-net-utils
-version?=$(shell git describe --dirty)
+version?=$(shell git describe --dirty --tags)
 
 prefix?=/usr/local
 sysconfdir=${DESTDIR}/etc
@@ -34,9 +34,26 @@ TOPDIR=${CURDIR}
 TESTDIR=${TOPDIR}/tests
 include ${TESTDIR}/Makefile
 
-sources:
+.PHONY: uncommitted-check
+uncommitted-check:
+	@if ! git update-index --refresh --unmerged || \
+	    ! git diff-index --name-only --exit-code HEAD; then \
+	      echo "*** ERROR: Uncommitted changes in above files"; exit 1; fi
+
+.PHONY: head-check
+head-check:
+	@if ! git diff --name-only --exit-code ${version} HEAD > /dev/null; then \
+		echo "*** ERROR: Git checkout not at version ${version}"; exit 1; fi ; \
+
+.PHONY: release-sources
+release-sources: uncommitted-check head-check
 	git archive --format tar.gz --prefix ${pkgname}-${version}/ HEAD > ../${pkgname}-${version}.tar.gz
 
+.PHONY: scratch-sources
+scratch-sources:
+	tar czf ../${pkgname}-${version}.tar.gz --exclude=.git --transform 's,^./,./${pkgname}-${version}/,' .
+
+.PHONY: install
 install:
 	${call install-exe,ec2dhcp.sh,${sysconfdir}/dhcp/dhclient.d}
 	${call install-file,ixgbevf.conf,${sysconfdir}/modprobe.d}
