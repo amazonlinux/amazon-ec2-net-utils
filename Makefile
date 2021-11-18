@@ -19,13 +19,13 @@ mandir=${DESTDIR}/${prefix}/share/man
 init=systemd
 
 define install-file
-test -d $2 || install -d -o root -g root -m755 $2
-install -o root -g root -m644 $1 $2
+test -d $2 || install -d -m755 $2
+install -m644 $1 $2
 endef
 
 define install-exe
-test -d $2 || install -d -o root -g root -m755 $2
-install -o root -g root -m755 $1 $2
+test -d $2 || install -d -m755 $2
+install -m755 $1 $2
 endef
 
 CLEANFILES:=
