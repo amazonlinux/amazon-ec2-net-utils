@@ -158,7 +158,7 @@ create_rules() {
 	    ;;
 	6)
 	    local_addr_key=ipv6s
-	    subnet_pd_key=ip6-prefix
+	    subnet_pd_key=ipv6-prefix
 	    ;;
 	*)
 	    error "unable to determine protocol"
