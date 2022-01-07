@@ -111,11 +111,11 @@ get_meta() {
   imds_exitcode=1
   while [ "${imds_exitcode}" -gt 0 ]; do
     if [ "${attempts}" -eq 0 ]; then
-      logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
+      logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/"
       return $imds_exitcode
     fi
-    logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
-    meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
+    logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/"
+    meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/)
     imds_exitcode=$?
     if [ "${imds_exitcode}" -gt 0 ]; then
       let attempts--
@@ -123,6 +123,9 @@ get_meta() {
       imds_exitcode=1
     fi
   done
+  logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
+  meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
+  imds_exitcode=$?
   echo "${meta}"
   return $imds_exitcode
 }
@@ -234,20 +237,6 @@ rewrite_primary() {
     return
   fi
   logger --tag ec2net "[rewrite_primary] Rewriting configs for ${INTERFACE}"
-  cidr=$(get_cidr)
-  if [ "${?}" -gt 0 ]; then
-    # For any errors from IMDS, bail out early rather than rewriting anything
-    # We'll get back here later and be able to rewrite things.
-    logger --tag ec2net "[rewrite_primary] Error $? contacting IMDS for ${INTERFACE}. Bailing out."
-    return $?
-  fi
-  if [ -z ${cidr} ]; then
-    return
-  fi
-  network=$(echo ${cidr}|cut -d/ -f1)
-  router=$(( $(echo ${network}|cut -d. -f4) + 1))
-  gateway="$(echo ${network}|cut -d. -f1-3).${router}"
-  primary_ipv4="$(get_primary_ipv4)"
   cat <<- EOF > ${config_file}
 	DEVICE=${INTERFACE}
 	BOOTPROTO=dhcp
@@ -264,6 +253,20 @@ rewrite_primary() {
 	EC2SYNC=yes
 	MAINROUTETABLE=${MAINROUTETABLE}
 EOF
+  cidr=$(get_cidr)
+  if [ "${?}" -gt 0 ]; then
+    # For any errors from IMDS, bail out early rather than rewriting anything
+    # We'll get back here later and be able to rewrite things.
+    logger --tag ec2net "[rewrite_primary] Error $? contacting IMDS for ${INTERFACE}. Bailing out."
+    return $?
+  fi
+  if [ -z ${cidr} ]; then
+    return
+  fi
+  network=$(echo ${cidr}|cut -d/ -f1)
+  router=$(( $(echo ${network}|cut -d. -f4) + 1))
+  gateway="$(echo ${network}|cut -d. -f1-3).${router}"
+  primary_ipv4="$(get_primary_ipv4)"
   cat <<- EOF > ${route_file}
 	default via ${gateway} dev ${INTERFACE} table ${RTABLE}
 	${cidr} dev ${INTERFACE} proto kernel scope link src ${primary_ipv4} table ${RTABLE}
