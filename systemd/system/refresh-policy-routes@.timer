@@ -5,4 +5,4 @@ OnUnitInactiveSec=60
 RandomizedDelaySec=5
 
 [Install]
-WantedBy=setup-policy-routes@%i.service
+WantedBy=policy-routes@%i.service
