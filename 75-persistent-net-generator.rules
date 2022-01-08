@@ -13,6 +13,9 @@ NAME=="?*", GOTO="persistent_net_generator_end"
 # do not create rule for eth0
 ENV{INTERFACE}=="eth0", GOTO="persistent_net_generator_end"
 
+# do not create rule if interface uses unrecognized driver
+ENV{ID_NET_DRIVER}!="vif|ena|ixgbevf", GOTO="persistent_net_generator_end"
+
 # read MAC address
 ENV{MATCHADDR}="$attr{address}"
 
