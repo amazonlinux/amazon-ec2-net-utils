@@ -1,0 +1,59 @@
+version: 2.1
+
+jobs:
+  code-checks:
+    docker:
+      - image: public.ecr.aws/debian/debian:11
+    steps:
+      - run:
+          name: "Install dependencies"
+          command: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install shellcheck git ssh-client"
+      - checkout
+      - run:
+          name: "shellcheck"
+          command: "shellcheck -s bash -S warning bin/*.sh"
+  al2022-rpm-scratch:
+    docker:
+      - image: public.ecr.aws/amazonlinux/amazonlinux:2022
+    steps:
+      - run:
+          name: "Install dependencies"
+          command: "dnf -y install rpm-build make git openssh-clients xz"
+      - checkout
+      - run:
+          name: "Repack sources"
+          command: |
+            v=$(rpmspec -q --qf "%{version}" amazon-ec2-net-utils.spec)
+            make tmp-dist
+            mkdir ../amazon-ec2-net-utils-${v}
+            xzcat ../amazon-ec2-net-utils*.tar.xz | tar -C ../amazon-ec2-net-utils-${v} -xf - --strip-components=1
+            tar cvJf amazon-ec2-net-utils-${v}.tar.xz ../amazon-ec2-net-utils-${v}
+      - run:
+          name: "rpmbuild"
+          command: rpmbuild --define "_sourcedir $PWD" -bb amazon-ec2-net-utils.spec
+  debian-11-deb-scratch:
+    docker:
+      - image: public.ecr.aws/debian/debian:11
+    steps:
+      - run:
+          name: "Install dependencies"
+          command: |
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends build-essential debhelper git devscripts shellcheck
+      - checkout
+      - run:
+          name: "Repack sources"
+          command: |
+            v=$(git describe --tags | sed 's,^v,,')
+            make tmp-dist
+            DEBEMAIL=nobody@localhost DEBFULLNAME="test runner" dch -v "${v}-1" -b -D unstable "scratch build"
+            mv ../amazon-ec2-net-utils-${v}.tar.xz ../amazon-ec2-net-utils_${v}.orig.tar.xz
+      - run:
+          name: "dpkg-buildpackage"
+          command: "dpkg-buildpackage -uc -us"
+workflows:
+  ci-workflow:
+    jobs:
+      - code-checks
+      - al2022-rpm-scratch
+      - debian-11-deb-scratch
