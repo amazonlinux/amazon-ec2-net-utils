@@ -1,8 +1,4 @@
 [Timer]
-
 OnActiveSec=30
 OnUnitInactiveSec=60
 RandomizedDelaySec=5
-
-[Install]
-WantedBy=policy-routes@%i.service
