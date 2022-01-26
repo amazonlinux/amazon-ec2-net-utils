@@ -6,7 +6,7 @@
 
 Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
-Version:   1.5
+Version:   1.6
 Release:   1%{?dist}
 License:   MIT and GPLv2
 
@@ -86,6 +86,10 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Wed Jan 26 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.6-1
+- Update to upstream release 1.6.  Details at
+  https://github.com/aws/amazon-ec2-net-utils/releases/tag/1.6
+
 * Mon Dec 14 2020 Noah Meyerhans <nmeyerha@amazon.com> 1.5-1.amzn2
 - Update Provides and Obsoletes to define an upgrade path from ec2-net-utils
 - Use upstream Makefile during install
