@@ -199,8 +199,17 @@ create_interface_config() {
     local ether=$3
     local metric=${4:-1024}
     local tablename=$tableid
+
+    local usedns=no
+    local usentp=no
+    local usehostname=no
+
     if [ "$tableid" = "0" ]; then
-	tablename=main
+        # This is the "primary" interface
+        tablename=main
+        usedns=yes
+        usentp=yes
+        usehostname=yes
     fi
     local cfgfile="${runtimedir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
@@ -227,7 +236,14 @@ LLMNR=no
 [DHCPv4]
 RouteTable=${tableid}
 RouteMetric=${metric}
-UseHostname=no
+UseHostname=${usehostname}
+UseDNS=${usedns}
+UseNTP=${usentp}
+
+[DHCPv6]
+UseHostname=${usehostname}
+UseDNS=${usedns}
+UseNTP=${usentp}
 
 [Route]
 Gateway=_ipv6ra
