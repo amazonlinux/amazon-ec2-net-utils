@@ -245,6 +245,7 @@ UseHostname=${usehostname}
 UseDNS=${usedns}
 UseNTP=${usentp}
 RouteMetric=${metric}
+WithoutRA=solicit
 
 [Route]
 Gateway=_ipv6ra
