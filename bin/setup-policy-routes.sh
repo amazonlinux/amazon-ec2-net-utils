@@ -203,6 +203,8 @@ create_interface_config() {
     local usedns=no
     local usentp=no
     local usehostname=no
+    local usedomains=no
+    local dnsdefaultroute=no
 
     if [ "$tableid" = "0" ]; then
         # This is the "primary" interface
@@ -210,6 +212,8 @@ create_interface_config() {
         usedns=yes
         usentp=yes
         usehostname=yes
+        usedomains=yes
+        dnsdefaultroute=yes
     fi
     local cfgfile="${runtimedir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
@@ -232,6 +236,8 @@ MTUBytes=9001
 DHCP=yes
 IPv6DuplicateAddressDetection=0
 LLMNR=no
+DNSDefaultRoute=${dnsdefaultroute}
+
 
 [DHCPv4]
 RouteTable=${tableid}
@@ -239,6 +245,7 @@ RouteMetric=${metric}
 UseHostname=${usehostname}
 UseDNS=${usedns}
 UseNTP=${usentp}
+UseDomains=${usedomains}
 
 [DHCPv6]
 UseHostname=${usehostname}
@@ -254,6 +261,7 @@ Metric=${metric}
 
 [IPv6AcceptRA]
 RouteTable=${tableid}
+UseDomains=${usedomains}
 EOF
 
     echo 1
