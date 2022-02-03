@@ -1,5 +1,5 @@
 [Unit]
-Description=Set up policy routes for %I
+Description=Refresh policy routes for %I
 
 [Service]
 Type=oneshot
