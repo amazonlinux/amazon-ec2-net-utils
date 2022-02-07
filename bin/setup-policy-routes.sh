@@ -32,21 +32,21 @@ get_token() {
     local deadline
     deadline=$(date -d "now+30 seconds" +%s)
     while [ "$(date +%s)" -lt $deadline ]; do
-	for ep in "${imds_endpoints[@]}"; do
-	    set +e
-	    imds_token=$(curl --connect-timeout 0.15 -s --fail \
-			      -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${ep}/${imds_token_path})
-	    set -e
-	    if [ -n "$imds_token" ]; then
-		debug "Got IMDSv2 token from ${ep}"
-		imds_endpoint=$ep
-		return
-	    fi
-	done
-	if [ ! -v EC2_IF_INITIAL_SETUP ]; then
-	    break
-	fi
-	sleep 0.5
+        for ep in "${imds_endpoints[@]}"; do
+            set +e
+            imds_token=$(curl --connect-timeout 0.15 -s --fail \
+                              -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${ep}/${imds_token_path})
+            set -e
+            if [ -n "$imds_token" ]; then
+                debug "Got IMDSv2 token from ${ep}"
+                imds_endpoint=$ep
+                return
+            fi
+        done
+        if [ ! -v EC2_IF_INITIAL_SETUP ]; then
+            break
+        fi
+        sleep 0.5
     done
 }
 
@@ -100,23 +100,23 @@ _install_and_reload() {
     local src=$1
     local dest=$2
     if [ -e "$dest" ]; then
-	if [ "$(md5sum < $dest)" = "$(md5sum < $src)" ]; then
-	    # The config is unchanged since last run. Nothing left to do:
-	    rm "$src"
-	    echo 0
-	else
-	    # The file content has changed, we need to reload:
-	    mv "$src" "$dest"
-	    echo 1
-	fi
-	return
+        if [ "$(md5sum < $dest)" = "$(md5sum < $src)" ]; then
+            # The config is unchanged since last run. Nothing left to do:
+            rm "$src"
+            echo 0
+        else
+            # The file content has changed, we need to reload:
+            mv "$src" "$dest"
+            echo 1
+        fi
+        return
     fi
 
     # If we're here then we're creating a new config file
     if [ "$(stat --format=%s $src)" -gt 0 ]; then
-	mv "$src" "$dest"
-	echo 1
-	return
+        mv "$src" "$dest"
+        echo 1
+        return
     fi
     rm "$src"
     echo 0
@@ -134,7 +134,7 @@ create_ipv4_aliases() {
     touch "$work"
 
     for a in $addresses; do
-	cat <<EOF >> "$work"
+        cat <<EOF >> "$work"
 [Address]
 Address=${a}/32
 AddPrefixRoute=false
@@ -152,18 +152,18 @@ create_rules() {
     local drop_in_dir="${runtimedir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
     case $family in
-	4)
-	    local_addr_key=local-ipv4s
-	    subnet_pd_key=ipv4-prefix
-	    ;;
-	6)
-	    local_addr_key=ipv6s
-	    subnet_pd_key=ipv6-prefix
-	    ;;
-	*)
-	    error "unable to determine protocol"
-	    return 1
-	    ;;
+        4)
+            local_addr_key=local-ipv4s
+            subnet_pd_key=ipv4-prefix
+            ;;
+        6)
+            local_addr_key=ipv6s
+            subnet_pd_key=ipv6-prefix
+            ;;
+        *)
+            error "unable to determine protocol"
+            return 1
+            ;;
     esac
 
     # We'd like to retry here, but we can't distinguish between an
@@ -183,7 +183,7 @@ create_rules() {
     touch "$work"
 
     for source in $addrs $prefixes; do
-	cat <<EOF >> "$work"
+        cat <<EOF >> "$work"
 [RoutingPolicyRule]
 From=${source}
 Priority=${ruleid}
@@ -199,14 +199,27 @@ create_interface_config() {
     local ether=$3
     local metric=${4:-1024}
     local tablename=$tableid
+
+    local usedns=no
+    local usentp=no
+    local usehostname=no
+    local usedomains=no
+    local dnsdefaultroute=no
+
     if [ "$tableid" = "0" ]; then
-	tablename=main
+        # This is the "primary" interface
+        tablename=main
+        usedns=yes
+        usentp=yes
+        usehostname=yes
+        usedomains=yes
+        dnsdefaultroute=yes
     fi
     local cfgfile="${runtimedir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
-	info "Using existing cfgfile ${cfgfile}"
-	echo 0
-	return
+        info "Using existing cfgfile ${cfgfile}"
+        echo 0
+        return
     fi
 
     info "Creating $cfgfile"
@@ -223,11 +236,23 @@ MTUBytes=9001
 DHCP=yes
 IPv6DuplicateAddressDetection=0
 LLMNR=no
+DNSDefaultRoute=${dnsdefaultroute}
+
 
 [DHCPv4]
 RouteTable=${tableid}
 RouteMetric=${metric}
-UseHostname=no
+UseHostname=${usehostname}
+UseDNS=${usedns}
+UseNTP=${usentp}
+UseDomains=${usedomains}
+
+[DHCPv6]
+UseHostname=${usehostname}
+UseDNS=${usedns}
+UseNTP=${usentp}
+RouteMetric=${metric}
+WithoutRA=solicit
 
 [Route]
 Gateway=_ipv6ra
@@ -236,6 +261,7 @@ Metric=${metric}
 
 [IPv6AcceptRA]
 RouteTable=${tableid}
+UseDomains=${usedomains}
 EOF
 
     echo 1
@@ -258,28 +284,28 @@ setup_interface() {
     local -i deadline
     deadline=$(date -d "now+30 seconds" +%s)
     while [ "$(date +%s)" -lt $deadline ]; do
-	local -i changes=0
-	if [ "$type" = primary ]; then
-	    changes+=$(create_interface_config "$iface" 0 "$ether" 512)
-	else
-	    local -i index ruleid
-	    index=$(cat /sys/class/net/${iface}/ifindex)
-	    [ -n "$index" ] || { error "Unable to get index of $iface" ; exit 2; }
-	    ruleid=$((index+10000))
-	    mkdir -p /run/network/$iface
-	    echo $ruleid > /run/network/$iface/pref
+        local -i changes=0
+        if [ "$type" = primary ]; then
+            changes+=$(create_interface_config "$iface" 0 "$ether" 512)
+        else
+            local -i index ruleid
+            index=$(cat /sys/class/net/${iface}/ifindex)
+            [ -n "$index" ] || { error "Unable to get index of $iface" ; exit 2; }
+            ruleid=$((index+10000))
+            mkdir -p /run/network/$iface
+            echo $ruleid > /run/network/$iface/pref
 
-	    changes+=$(create_interface_config "$iface" "$ruleid" "$ether")
-	    for family in 4 6; do
-		changes+=$(create_rules "$iface" "$ruleid" $family)
-	    done
-	fi
-	changes+=$(create_ipv4_aliases $iface $ether)
+            changes+=$(create_interface_config "$iface" "$ruleid" "$ether")
+            for family in 4 6; do
+                changes+=$(create_rules "$iface" "$ruleid" $family)
+            done
+        fi
+        changes+=$(create_ipv4_aliases $iface $ether)
 
-	if [ ! -v EC2_IF_INITIAL_SETUP ] ||
-	   [ "$changes" -gt 0 ]; then
-	    break
-	fi
+        if [ ! -v EC2_IF_INITIAL_SETUP ] ||
+               [ "$changes" -gt 0 ]; then
+            break
+        fi
     done
     echo $changes
 }
@@ -295,22 +321,22 @@ stop)
     # (e.g. interface configuration) here, since the interface may
     # have already been detached from the instance
     if [ ! -e "/run/network/$iface/pref" ]; then
-	exit 0
+        exit 0
     fi
 
     ruleid=$(cat /run/network/$iface/pref)
     test -n "$ruleid"
     info "Stopping $iface. Will remove rule $ruleid"
     for family in 4 6; do
-	flush_rules $ruleid $family
+        flush_rules $ruleid $family
     done
     rm -rf "/run/network/$iface"
     rm -fr "${runtimedir}/70-${iface}.network" "${runtimedir}/70-${iface}.network.d"
     ;;
 *)
     while [ ! -e "/sys/class/net/${iface}" ]; do
-	debug  "Waiting for sysfs node to exist"
-	sleep 0.1
+        debug  "Waiting for sysfs node to exist"
+        sleep 0.1
     done
     info "Starting configuration for $iface"
     debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
@@ -325,18 +351,18 @@ stop)
     # but interface details take some time to propagate, and IMDS
     # reports 0 for the device-number prior to propagation...
     if [ "$ether" = "$imds_ether" ]; then
-	info "Configuring $iface as primary"
-	# We don't give the "primary" interface a custom route table,
-	# but do override its route metric to ensure that it is
-	# preferred over any other route that might appear in the main
-	# table:
-	changes+=$(setup_interface $iface $ether primary)
+        info "Configuring $iface as primary"
+        # We don't give the "primary" interface a custom route table,
+        # but do override its route metric to ensure that it is
+        # preferred over any other route that might appear in the main
+        # table:
+        changes+=$(setup_interface $iface $ether primary)
     else
-	changes+=$(setup_interface $iface $ether secondary)
+        changes+=$(setup_interface $iface $ether secondary)
     fi
     if [ $changes -gt 0 ]; then
-	info "Reloading networkd"
-	networkctl reload
+        info "Reloading networkd"
+        networkctl reload
     fi
 
     ;;
