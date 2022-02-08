@@ -1,6 +1,6 @@
 /etc/network
 /usr/bin
 /etc/udev/rules.d
-/etc/systemd/system
-/etc/systemd/network
+/usr/lib/systemd/system
+/usr/lib/systemd/network
 /etc/sysctl.d
