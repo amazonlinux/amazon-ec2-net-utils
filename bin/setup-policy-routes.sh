@@ -193,78 +193,66 @@ EOF
     _install_and_reload "$work" "$file"
 }
 
+create_if_overrides() {
+    local iface="$1"
+    local tableid="$2"
+    local ether="$3"
+    local cfgfile="$4"
+    local cfgdir="${cfgfile}.d"
+    local dropin="${cfgdir}/eni.conf"
+    mkdir -p "$cfgdir"
+    if [ $tableid -eq 0 ]; then
+        # primary, just match on MAC
+        cat <<EOF > "${dropin}.tmp"
+[Match]
+MACAddress=${ether}
+EOF
+    else
+        # secondary. match on MAC and set up private route tables
+        cat <<EOF > "${dropin}.tmp"
+[Match]
+MACAddress=${ether}
+[DHCPv4]
+RouteTable=${tableid}
+[Route]
+Table=${tableid}
+
+[IPv6AcceptRA]
+RouteTable=${tableid}
+EOF
+    fi
+    mv "${dropin}.tmp" "$dropin"
+    echo 1
+}
+
 create_interface_config() {
     local iface=$1
     local tableid=$2
     local ether=$3
-    local metric=${4:-1024}
-    local tablename=$tableid
 
-    local usedns=no
-    local usentp=no
-    local usehostname=no
-    local usedomains=no
-    local dnsdefaultroute=no
+    local libdir=/usr/lib/systemd/network
+    local primarynetwork="${libdir}/80-ec2-primary.network"
+    local secondarynetwork="${libdir}/85-ec2-secondary.network"
+    local target="${secondarynetwork}"
+
+    local -i retval=0
 
     if [ "$tableid" = "0" ]; then
         # This is the "primary" interface
-        tablename=main
-        usedns=yes
-        usentp=yes
-        usehostname=yes
-        usedomains=yes
-        dnsdefaultroute=yes
+        target="${primarynetwork}"
     fi
     local cfgfile="${runtimedir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
         info "Using existing cfgfile ${cfgfile}"
-        echo 0
+        echo $retval
         return
     fi
 
-    info "Creating $cfgfile"
+    info "Linking $cfgfile to $target"
     mkdir -p "$runtimedir"
-    cat <<EOF > "$cfgfile"
-[Match]
-Driver=ena ixgbevf vif
-MACAddress=${ether}
-
-[Link]
-MTUBytes=9001
-
-[Network]
-DHCP=yes
-IPv6DuplicateAddressDetection=0
-LLMNR=no
-DNSDefaultRoute=${dnsdefaultroute}
-
-
-[DHCPv4]
-RouteTable=${tableid}
-RouteMetric=${metric}
-UseHostname=${usehostname}
-UseDNS=${usedns}
-UseNTP=${usentp}
-UseDomains=${usedomains}
-
-[DHCPv6]
-UseHostname=${usehostname}
-UseDNS=${usedns}
-UseNTP=${usentp}
-RouteMetric=${metric}
-WithoutRA=solicit
-
-[Route]
-Gateway=_ipv6ra
-Table=${tablename}
-Metric=${metric}
-
-[IPv6AcceptRA]
-RouteTable=${tableid}
-UseDomains=${usedomains}
-EOF
-
-    echo 1
+    ln -s "$target" "$cfgfile"
+    retval+=$(create_if_overrides "$iface" "$tableid" "$ether" "$cfgfile")
+    echo $retval
 }
 
 # The primary interface is configured to use the 'main' route table,

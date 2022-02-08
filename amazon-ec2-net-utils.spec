@@ -25,10 +25,11 @@ make install DESTDIR=%{buildroot} PREFIX=/usr
 
 %files
 %{_sysconfdir}/sysctl.d/90-ipv6-dad.conf
-%{_sysconfdir}/systemd/network/80-ec2.network
-%{_sysconfdir}/systemd/system/policy-routes@.service
-%{_sysconfdir}/systemd/system/refresh-policy-routes@.service
-%{_sysconfdir}/systemd/system/refresh-policy-routes@.timer
+/usr/lib/systemd/network/80-ec2-primary.network
+/usr/lib/systemd/network/85-ec2-secondary.network
+/usr/lib/systemd/system/policy-routes@.service
+/usr/lib/systemd/system/refresh-policy-routes@.service
+/usr/lib/systemd/system/refresh-policy-routes@.timer
 
 %{_sysconfdir}/udev/rules.d/98-eni.rules
 %{_sysconfdir}/udev/rules.d/99-vpc-policy-routes.rules
