@@ -227,6 +227,17 @@ EOF
     echo 1
 }
 
+add_altname() {
+    local iface=$1
+    local ether=$2
+    local eni_id
+    eni_id=$(get_iface_imds "$ether" interface-id)
+    if [ -n "$eni_id" ] &&
+           ! ip link show dev "$iface" | grep -q -E "altname\s+${eni_id}"; then
+        ip link property add dev "$iface" altname "$eni_id" || true
+    fi
+}
+
 create_interface_config() {
     local iface=$1
     local tableid=$2
@@ -254,6 +265,7 @@ create_interface_config() {
     mkdir -p "$runtimedir"
     ln -s "$target" "$cfgfile"
     retval+=$(create_if_overrides "$iface" "$tableid" "$ether" "$cfgfile")
+    add_altname "$iface" "$ether"
     echo $retval
 }
 
