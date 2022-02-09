@@ -31,8 +31,8 @@ make install DESTDIR=%{buildroot} PREFIX=/usr
 /usr/lib/systemd/system/refresh-policy-routes@.service
 /usr/lib/systemd/system/refresh-policy-routes@.timer
 
-%{_sysconfdir}/udev/rules.d/98-eni.rules
-%{_sysconfdir}/udev/rules.d/99-vpc-policy-routes.rules
+/usr/lib/udev/rules.d/98-eni.rules
+/usr/lib/udev/rules.d/99-vpc-policy-routes.rules
 %{_bindir}/setup-policy-routes
 
 %post
