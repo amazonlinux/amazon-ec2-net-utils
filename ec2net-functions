@@ -69,18 +69,15 @@ function rm() {
     command "$FUNCNAME" "$@"
 }
 
-if [ -s ${config_file} ]; then
-  # make no changes to unmanaged interfaces
-  unmanaged=$(LANG=C grep -l "^[[:space:]]*EC2SYNC=no\([[:space:]#]\|$\)" $config_file)
-  if [ "${config_file}" == "${unmanaged}" ]; then
-    logger --tag ec2net "Not managing ${INTERFACE}"
-    exit
-  fi
-  # check to see if we should add a default route through ${INTERFACE} to the main kernel route table
-  no_default_route=$(LANG=C grep -l "^[[:space:]]*MAINROUTETABLE=no\([[:space:]#]\|$\)" $config_file)
-  if [ "${no_default_route}" == "${config_file}" ]; then
+# shellcheck source=./ec2net-functions-lib
+. "${EC2_INCLUDEDIR:-/etc/sysconfig/network-scripts}/ec2net-functions-lib"
+
+if should_sync_interface "${INTERFACE}" "${config_file}"; then
+  if ! should_use_mainroutetable "$config_file"; then
     MAINROUTETABLE="no"
   fi
+else
+  exit 0
 fi
 
 get_meta() {

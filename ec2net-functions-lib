@@ -1,0 +1,61 @@
+# -*-Shell-script-*-
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the MIT License. See the LICENSE accompanying this file
+# for the specific language governing permissions and limitations under
+# the License.
+
+# Library of function shared across various components of
+# ec2-net-utils.  Ideally the functions here would have been added
+# directly to ec2net-functions, and it would have been imported into
+# programs that need it.  However, that file is large, and makes a
+# number of modifications to the global process namespace.  We want to
+# make these functions usable in environments like dhclient hooks,
+# which all run within a single shell process, and modifying the
+# global namespace so extensively is unsafe.  So we introduce this
+# file and move definitions into it that are less likely to conflict
+# with third-party hooks or other such modifications.
+
+# Normally the ec2-net-utils scripts assume ownership of the ifcfg-* configuration files.
+should_sync_interface() {
+    local interface=$1
+    local config_file=$2
+    if [ -z "$interface" ] ||
+           [ -z "$config_file" ]; then
+        return 1
+    fi
+    local unmanaged
+    if [ -s ${config_file} ]; then
+        # make no changes to unmanaged interfaces
+        unmanaged=$(LANG=C grep -l "^[[:space:]]*EC2SYNC=no\([[:space:]#]\|$\)" $config_file)
+        if [ "${config_file}" == "${unmanaged}" ]; then
+            logger --tag ec2net "${interface} should not be unmanaged"
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# VPC assign IPv4 addresses in the 169.254/16 link-local range in
+# IPv6-only subnets.
+subnet_supports_ipv4() {
+    local address=$1
+    case "$address" in
+        "")
+            return 1
+            ;;
+        169.254.*)
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+# Local Variables:
+# mode: shell-script
+# tab-width: 4
+# indent-tabs-mode: nil
+# End:
