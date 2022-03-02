@@ -273,6 +273,21 @@ remove_aliases() {
 }
 
 rewrite_aliases() {
+  # Exported by dhclient:
+  local new_ip_address="${new_ip_address}"
+  local reason="${reason}"
+
+  if [[ "$reason" == *6 ]]; then
+      # We're processing a DHCPv6 lease and don't use aliases in the
+      # context of IPv6, so there's nothing to.
+      return
+  fi
+
+  if ! subnet_supports_ipv4 "${new_ip_address}"; then
+    logger --tag ec2net -p user.debug "[rewrite_aliases] $INTERFACE subnet is IPv6-only"
+    return
+  fi
+
   aliases=($(get_secondary_ipv4s))
   if [ $? -gt 0 ]; then
     logger --tag ec2net "[rewrite_aliases] Failed to get secondary IPs from IMDS. Aborting"
