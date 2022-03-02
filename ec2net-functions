@@ -46,23 +46,23 @@ MAINROUTETABLE="yes"
 
 
 function ip() {
-    command "$FUNCNAME" "$@"
+    command "${FUNCNAME[0]}" "$@"
 }
 
 function ifup() {
-    command "$FUNCNAME" "$@"
+    command "${FUNCNAME[0]}" "$@"
 }
 
 function ifdown() {
-    command "$FUNCNAME" "$@"
+    command "${FUNCNAME[0]}" "$@"
 }
 
 function logger() {
-    command "$FUNCNAME" "$@"
+    command "${FUNCNAME[0]}" "$@"
 }
 
 function rm() {
-    command "$FUNCNAME" "$@"
+    command "${FUNCNAME[0]}" "$@"
 }
 
 # shellcheck source=./ec2net-functions-lib
@@ -186,6 +186,9 @@ get_ipv6_gateway() {
   # DHCP6 server ID. If that env var is passed to dhclient-script
   # we determine the router address from that; otherwise we wait
   # up to 10 seconds for an RA route to be added by the kernel.
+
+  # Exported by dhclient:
+  local new_dhcp6_server_id=$new_dhcp6_server_id
 
   if echo "$new_dhcp6_server_id" | grep -q "^0:3:0:1:"; then
     logger --tag ec2net "[get_ipv6_gateway] Using DHCP6 environment variable"
@@ -373,7 +376,8 @@ rewrite_rules_v6() {
 
   # This is the part we would do in rewrite_primary() if we knew
   # the gateway address.
-  if [ ${#ip6s[*]} -gt 0 -a -z "$(ip -6 route show table ${RTABLE})" ]; then
+  if [ ${#ip6s[*]} -gt 0 ] &&
+         [ -z "$(ip -6 route show table ${RTABLE})" ]; then
     gateway6=$(get_ipv6_gateway)
     # Manually add the route, then add it to ${route6_file} so it
     # gets brought down with the rest of the interface.

@@ -20,31 +20,31 @@ done
 # Redefine the shell wrapper functions for the various interface
 # management and system tools we invoke in ec2net-functions:
 function ip() {
-    echo "CALLED $FUNCNAME $@" >&2
+    echo "CALLED ${FUNCNAME[0]} $@" >&2
 }
 
 function ifup() {
-    echo "CALLED $FUNCNAME" $@ >&2
+    echo "CALLED ${FUNCNAME[0]}" $@ >&2
 }
 
 function ifdown() {
-    echo "CALLED $FUNCNAME" $@ >&2
+    echo "CALLED ${FUNCNAME[0]}" $@ >&2
 }
 
 function logger() {
-    echo "CALLED $FUNCNAME" $@ >&2
+    echo "CALLED ${FUNCNAME[0]}" $@ >&2
 }
 
 function rm() {
-    echo "CALLED $FUNCNAME" $@ >&2
-    command "$FUNCNAME" $@
+    echo "CALLED ${FUNCNAME[0]}" $@ >&2
+    command "${FUNCNAME[0]}" $@
 }
 
 # Return some pre-defined values for various instance metadata values.
 # Values for keys not explicitly defined here will be empty, and we
 # will log a message to stderr indicating so.
 get_meta() {
-    echo "CALLED $FUNCNAME" $@ >&2
+    echo "CALLED ${FUNCNAME[0]}" $@ >&2
     case "$1" in
 	subnet-ipv4-cidr-block)
 	    echo "192.168.10.0/24"
