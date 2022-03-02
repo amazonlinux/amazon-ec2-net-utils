@@ -21,7 +21,7 @@ endef
 define do-test
   cd ${TESTDIR} && \
     PARAMS=${TESTDIR}/params-${1}.sh \
-    ETCDIR="./test-output/${1}/etc" \
+    EC2_ETCDIR="./test-output/${1}/etc" \
     ./test-${2} 2> ${OUTPUTDIR}/${1}/${2}.out
 endef
 

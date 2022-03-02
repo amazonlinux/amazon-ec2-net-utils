@@ -45,7 +45,7 @@ configuration:
     # Replace /etc with something local and writable.  The Makefile makes
     # use of the test-output directory specifically when comparing test
     # output with known state.
-    ETCDIR=./test-output/etc/
+    EC2_ETCDIR=./test-output/etc/
     
     # After defining the above variables, load the standard
     # ec2net-functions library and then load the test-functions

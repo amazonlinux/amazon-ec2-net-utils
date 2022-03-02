@@ -20,7 +20,7 @@ fi
 
 # Support alternate locations for config files in order to facilitate
 # testing.
-ETCDIR=${ETCDIR:-/etc}
+EC2_ETCDIR=${EC2_ETCDIR:-/etc}
 SYSFSDIR=${SYSFSDIR:-/sys}
 
 HWADDR=$(cat "${SYSFSDIR}"/class/net/${INTERFACE}/address 2>/dev/null)
@@ -42,10 +42,10 @@ let RTABLE+=10000
 METADATA_BASEURL="http://169.254.169.254/latest"
 METADATA_MAC_PATH="meta-data/network/interfaces/macs"
 METADATA_TOKEN_PATH="api/token"
-config_file="$ETCDIR/sysconfig/network-scripts/ifcfg-${INTERFACE}"
-route_file="$ETCDIR/sysconfig/network-scripts/route-${INTERFACE}"
-route6_file="$ETCDIR/sysconfig/network-scripts/route6-${INTERFACE}"
-dhclient_file="$ETCDIR/dhcp/dhclient-${INTERFACE}.conf"
+config_file="$EC2_ETCDIR/sysconfig/network-scripts/ifcfg-${INTERFACE}"
+route_file="$EC2_ETCDIR/sysconfig/network-scripts/route-${INTERFACE}"
+route6_file="$EC2_ETCDIR/sysconfig/network-scripts/route6-${INTERFACE}"
+dhclient_file="$EC2_ETCDIR/dhcp/dhclient-${INTERFACE}.conf"
 MAINROUTETABLE="yes"
 
 
