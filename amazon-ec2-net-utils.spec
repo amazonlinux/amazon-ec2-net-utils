@@ -6,7 +6,7 @@
 
 Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
-Version:   1.6
+Version:   1.6.1
 Release:   1%{?dist}
 License:   MIT and GPLv2
 
@@ -23,9 +23,9 @@ BuildRequires: systemd
 BuildRequires: systemd-units
 Requires: systemd-units
 %endif # systemd
-Requires: dhclient
+Requires: dhclient >= 4.2.5-77.amzn2.1.5
 Provides: ec2-net-utils = %{version}-%{release}
-Obsoletes: ec2-net-utils < 1.5
+Obsoletes: ec2-net-utils < 1.6.1
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -64,6 +64,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_udevrulesdir}/75-persistent-net-generator.rules
 %config(noreplace) %{_sysconfdir}/modprobe.d/ixgbevf.conf
 %config(noreplace) %{_sysconfdir}/sysconfig/network-scripts/ec2net-functions
+%config(noreplace) %{_sysconfdir}/sysconfig/network-scripts/ec2net-functions-lib
 %{_sysconfdir}/sysconfig/network-scripts/ec2net.hotplug
 %{_sysconfdir}/dhcp/dhclient.d/ec2dhcp.sh
 %config(noreplace) %{_sysconfdir}/dhcp/dhclient-enter-hooks.d/50_ec2_rewrite_primary_enter_hook.sh
@@ -87,6 +88,11 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Thu Mar  3 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.6.1-1
+- Update to upstream release 1.6.1.
+- Update dhclient dependency to require at least 4.2.5-77.amzn2.1.5,
+  for /etc/dhcp/dhclient-enter-hooks.d/ support.
+
 * Wed Jan 26 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.6-1
 - Update to upstream release 1.6.  Details at
   https://github.com/aws/amazon-ec2-net-utils/releases/tag/1.6
