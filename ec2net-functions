@@ -35,10 +35,6 @@ if [ -z "${HWADDR}" ] && [ "${ACTION}" != "remove" ]; then
 fi
 export HWADDR
 
-# generate a routing table number
-RTABLE=${INTERFACE#eth}
-let RTABLE+=10000
-
 METADATA_BASEURL="http://169.254.169.254/latest"
 METADATA_MAC_PATH="meta-data/network/interfaces/macs"
 METADATA_TOKEN_PATH="api/token"
@@ -71,6 +67,8 @@ function rm() {
 
 # shellcheck source=./ec2net-functions-lib
 . "${EC2_INCLUDEDIR:-/etc/sysconfig/network-scripts}/ec2net-functions-lib"
+
+RTABLE=$(get_interface_rt_table "$INTERFACE")
 
 if should_sync_interface "${INTERFACE}" "${config_file}"; then
   if ! should_use_mainroutetable "$config_file"; then
@@ -250,30 +248,7 @@ rewrite_primary() {
 	EC2SYNC=yes
 	MAINROUTETABLE=${MAINROUTETABLE}
 EOF
-  cidr=$(get_cidr)
-  if [ "${?}" -gt 0 ]; then
-    # For any errors from IMDS, bail out early rather than rewriting anything
-    # We'll get back here later and be able to rewrite things.
-    logger --tag ec2net "[rewrite_primary] Error $? contacting IMDS for ${INTERFACE}. Bailing out."
-    return $?
-  fi
-  if [ -z ${cidr} ]; then
-    return
-  fi
-  network=$(echo ${cidr}|cut -d/ -f1)
-  router=$(( $(echo ${network}|cut -d. -f4) + 1))
-  gateway="$(echo ${network}|cut -d. -f1-3).${router}"
-  primary_ipv4="$(get_primary_ipv4)"
-  cat <<- EOF > ${route_file}
-	default via ${gateway} dev ${INTERFACE} table ${RTABLE}
-	${cidr} dev ${INTERFACE} proto kernel scope link src ${primary_ipv4} table ${RTABLE}
-EOF
-  if [ "${MAINROUTETABLE}" == "yes" ]; then
-	logger --tag ec2net "[rewrite_primary] adding default route to main table for ${INTERFACE}"
-	cat <<- EOF >> ${route_file}
-	default via ${gateway} dev ${INTERFACE} metric ${RTABLE}
-EOF
-  fi
+
   # We would normally write to ${route6_file} here but the
   # gateway is an fe80:: link local address that we get from the
   # RA. We only get an RA if the interface has an IPv6 address.

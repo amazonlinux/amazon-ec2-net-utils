@@ -11,7 +11,7 @@ jobs:
       - checkout
       - run:
           name: "shellcheck"
-          command: "shellcheck -s bash -S error ec2dhcp.sh ec2ifdown ec2ifup ec2ifscan ec2net-functions write_net_rules ec2net-functions-lib"
+          command: "shellcheck -s bash -S error ec2dhcp.sh ec2ifdown ec2ifup ec2ifscan ec2net-functions write_net_rules ec2net-functions-lib 50_ec2_rewrite_primary_enter_hook.sh"
   tests:
     docker:
       - image: public.ecr.aws/debian/debian:11

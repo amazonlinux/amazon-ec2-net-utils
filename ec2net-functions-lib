@@ -54,6 +54,30 @@ subnet_supports_ipv4() {
     esac
 }
 
+get_interface_rt_table() {
+    local interface=$1
+    # generate a routing table number
+    local RTABLE=${interface#eth}
+    let RTABLE+=10000
+    echo "$RTABLE"
+    return 0
+}
+
+# Whether or not a default route for the given interface should be
+# added to the main route table in addition to the interface's private
+# route table.
+should_use_mainroutetable() {
+    local config_file="$1"
+    if [ -s "$config_file" ]; then
+        local no_default_route
+        no_default_route=$(LANG=C grep -l "^[[:space:]]*MAINROUTETABLE=no\([[:space:]#]\|$\)" $config_file)
+        if [ "${no_default_route}" == "${config_file}" ]; then
+            return 1
+        fi
+    fi
+    return 0
+}
+
 # Local Variables:
 # mode: shell-script
 # tab-width: 4

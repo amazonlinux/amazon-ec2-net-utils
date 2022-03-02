@@ -66,6 +66,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/sysconfig/network-scripts/ec2net-functions
 %{_sysconfdir}/sysconfig/network-scripts/ec2net.hotplug
 %{_sysconfdir}/dhcp/dhclient.d/ec2dhcp.sh
+%config(noreplace) %{_sysconfdir}/dhcp/dhclient-enter-hooks.d/50_ec2_rewrite_primary_enter_hook.sh
 
 %if %{systemd}
 %{_sbindir}/ec2ifup

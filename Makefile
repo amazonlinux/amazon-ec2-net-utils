@@ -56,6 +56,7 @@ scratch-sources:
 .PHONY: install
 install:
 	${call install-exe,ec2dhcp.sh,${sysconfdir}/dhcp/dhclient.d}
+	${call install-exe,50_ec2_rewrite_primary_enter_hook.sh,${sysconfdir}/dhcp/dhclient-enter-hooks.d}
 	${call install-file,ixgbevf.conf,${sysconfdir}/modprobe.d}
 	${call install-file,ec2net-functions,${sysconfdir}/sysconfig/network-scripts}
 	${call install-file,ec2net-functions-lib,${sysconfdir}/sysconfig/network-scripts}
