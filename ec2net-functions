@@ -78,13 +78,20 @@ else
   exit 0
 fi
 
+# get an IMDS key for the interface being managed
+# parameters:
+# $1: key-name, e.g. local-ipv4s
+# $2: max query attempts (optional, default: 60)
 get_meta() {
-  logger --tag ec2net "[get_meta] Querying IMDS for ${METADATA_MAC_PATH}/${HWADDR}/${1}"
+  local key=$1
+  local max_attempts=${2:-60}
+  logger --tag ec2net "[get_meta] Querying IMDS for ${METADATA_MAC_PATH}/${HWADDR}/${key}"
   logger --tag ec2net "[get_meta] Getting token for IMDSv2."
 
-  # IMDS may have become temporarily unreachable, retry
-  local max_attempts=60
-  local attempts=${max_attempts}
+  # IMDS may have become temporarily unreachable, retry. Note that the
+  # token query ignores the max_attempts parameter. The token query
+  # should always be retried.
+  local attempts=60
   local imds_exitcode=1
   local meta
   while [ "${imds_exitcode}" -gt 0 ]; do
@@ -103,15 +110,15 @@ get_meta() {
   done
 
   # IMDS can take up to 30s to provide the information of a new ENI
-  attempts=60
+  attempts=${max_attempts}
   imds_exitcode=1
   while [ "${imds_exitcode}" -gt 0 ]; do
     if [ "${attempts}" -eq 0 ]; then
-      logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
+      logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${key}"
       return $imds_exitcode
     fi
-    logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
-    meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
+    logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${key}"
+    meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${key})
     imds_exitcode=$?
     if [ "${imds_exitcode}" -gt 0 ]; then
       let attempts--
@@ -155,7 +162,11 @@ get_secondary_ipv4s() {
 
 get_delegated_prefix() {
     local af=$1
-    local prefixes=($(get_meta "${af}-prefix"))
+    # IMDS provides no way of knowing definitively whether or not
+    # there's a prefix delegated to this interface.  So when probing
+    # for prefix keys, set the get_meta max attempts parameter to 1
+    local prefix_tries=1
+    local prefixes=($(get_meta "${af}-prefix" $prefix_tries))
     ec=$?
     echo "${prefixes[@]}"
     return $ec
