@@ -83,9 +83,10 @@ get_meta() {
   logger --tag ec2net "[get_meta] Getting token for IMDSv2."
 
   # IMDS may have become temporarily unreachable, retry
-  max_attempts=60
-  attempts=${max_attempts}
-  imds_exitcode=1
+  local max_attempts=60
+  local attempts=${max_attempts}
+  local imds_exitcode=1
+  local meta
   while [ "${imds_exitcode}" -gt 0 ]; do
     if [ "${attempts}" -eq 0 ]; then
       logger --tag ec2net "[get_meta] Failed to get IMDSv2 metadata token after ${max_attempts} attempts... Aborting"
@@ -106,21 +107,20 @@ get_meta() {
   imds_exitcode=1
   while [ "${imds_exitcode}" -gt 0 ]; do
     if [ "${attempts}" -eq 0 ]; then
-      logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/"
+      logger --tag ec2net "[get_meta] Failed to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
       return $imds_exitcode
     fi
-    logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/"
-    meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/)
+    logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
+    meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
     imds_exitcode=$?
     if [ "${imds_exitcode}" -gt 0 ]; then
       let attempts--
       sleep 0.5
       imds_exitcode=1
+    else
+        break
     fi
   done
-  logger --tag ec2net "[get_meta] Trying to get ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1}"
-  meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f ${METADATA_BASEURL}/${METADATA_MAC_PATH}/${HWADDR}/${1})
-  imds_exitcode=$?
   echo "${meta}"
   return $imds_exitcode
 }
