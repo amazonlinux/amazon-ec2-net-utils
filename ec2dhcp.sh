@@ -8,7 +8,7 @@
 
 INTERFACE="${interface}"
 PREFIX="${new_prefix}"
-. /etc/sysconfig/network-scripts/ec2net-functions
+. "${EC2_INCLUDEDIR:-/etc/sysconfig/network-scripts}/ec2net-functions"                                                                   
 
 ec2dhcp_config() {
   rewrite_rules
