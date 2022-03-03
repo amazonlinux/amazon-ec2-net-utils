@@ -7,17 +7,14 @@
 # the License.
 
 . ./common.sh
+# test params files should define a dhclient environment
+dhclient_env_up
 
-ec2dhcp_config() {
-  rewrite_rules
-  # This can be done asynchronously, to save boot time
-  # since it doesn't affect the primary address
-  rewrite_aliases &
-}
+. ../ec2dhcp.sh
 
-ec2dhcp_restore() {
-  remove_aliases
-  remove_rules
-}
+# sourcing ec2dhcp.sh leads to sourcing ec2net-functions again, which
+# undoes some of the overrides we installed, so we need to source
+# common.sh again:
+. ./common.sh
 
 ec2dhcp_config

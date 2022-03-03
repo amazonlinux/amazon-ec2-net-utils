@@ -1,0 +1,2 @@
+CALLED logger --tag ec2net [remove_aliases] Removing aliases of eth0
+CALLED ip -4 addr flush dev eth0 secondary

@@ -6,6 +6,23 @@
 # for the specific language governing permissions and limitations under
 # the License.
 
+# clean any dhclient environment
+reason=STOP
+unset new_host_name
+unset new_subnet_mask
+unset new_domain_name
+unset new_next_server
+unset new_ip_address
+unset new_network_number
+unset new_expiry
+unset new_dhcp_lease_time
+unset new_dhcp_server_identifier
+unset new_routers
+unset new_interface_mtu
+unset new_domain_name_servers
+unset new_dhcp_message_type
+unset new_broadcast_address
+
 . ./common.sh
 
 deactivate_primary

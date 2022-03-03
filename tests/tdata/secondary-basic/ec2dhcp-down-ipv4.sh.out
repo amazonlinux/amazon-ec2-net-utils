@@ -1,0 +1,5 @@
+CALLED logger --tag ec2net [remove_aliases] Removing aliases of eth1
+CALLED ip -4 addr flush dev eth1 secondary
+CALLED logger --tag ec2net [remove_rules] Removing rules for eth1
+CALLED ip -4 rule list
+CALLED ip -6 rule list

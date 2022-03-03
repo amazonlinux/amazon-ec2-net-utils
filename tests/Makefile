@@ -9,7 +9,7 @@
 export TESTDIR?=${CURDIR}
 OUTPUTDIR=${TESTDIR}/test-output
 TESTS=eth0-basic secondary-basic secondary-more-ips
-SCRIPTS=ec2ifup ec2dhcp.sh ec2ifdown
+SCRIPTS=ec2ifup ec2dhcp-up-ipv4.sh ec2dhcp-up-ipv6.sh ec2dhcp-down-ipv4.sh ec2dhcp-down-ipv6.sh ec2ifdown
 CLEANFILES+=${OUTPUTDIR}
 
 define do-tests
@@ -20,6 +20,8 @@ endef
 
 define do-test
   cd ${TESTDIR} && \
+    env -i \
+    EC2_INCLUDEDIR=.. \
     PARAMS=${TESTDIR}/params-${1}.sh \
     EC2_ETCDIR="./test-output/${1}/etc" \
     ./test-${2} 2> ${OUTPUTDIR}/${1}/${2}.out
