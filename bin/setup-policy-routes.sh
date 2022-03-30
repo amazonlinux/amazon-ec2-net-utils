@@ -70,21 +70,35 @@ error() {
 
 get_meta() {
     local key=$1
+    local max_tries=${2:-10}
+    declare -i attempts=0
     debug "[get_meta] Querying IMDS for ${key}"
 
     local url="${imds_endpoint}/meta-data/${key}"
-    curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url"
+    local meta rc
+    while [ $attempts -lt $max_tries ]; do
+        meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url")
+        rc=$?
+        if [ $rc -eq 0 ]; then
+            echo "$meta"
+            return 0
+        fi
+        attempts+=1
+    done
+    return 1
 }
 
 get_imds() {
     local key=$1
-    get_meta $key
+    local max_tries=${2:-10}
+    get_meta $key $max_tries
 }
 
 get_iface_imds() {
     local mac=$1
     local key=$2
-    get_imds network/interfaces/macs/${mac}/${key} | sort
+    local max_tries=${3:-10}
+    get_imds network/interfaces/macs/${mac}/${key} $max_tries | sort
 }
 
 flush_rules() {
@@ -126,6 +140,7 @@ create_ipv4_aliases() {
     local iface=$1
     local mac=$2
     local addresses
+    subnet_supports_ipv4 "$iface" || return 0
     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2)
     local drop_in_dir="${runtimedir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
@@ -143,6 +158,18 @@ EOF
     _install_and_reload "$work" "$file"
 }
 
+subnet_supports_ipv4() {
+    local iface=$1
+    test -n "$iface" || return 1
+    ip -4 addr show dev "$iface" scope global | sed -n -E 's,^.*inet (\S+).*,\1,p' | grep -E -q -v '^169\.254\.'
+}
+
+subnet_supports_ipv6() {
+    local iface=$1
+    test -n "$iface" || return 1
+    ip -6 addr show dev "$iface" scope global | grep -q inet6
+}
+
 create_rules() {
     local iface=$1
     local ruleid=$2
@@ -153,10 +180,16 @@ create_rules() {
     mkdir -p "$drop_in_dir"
     case $family in
         4)
+            if ! subnet_supports_ipv4 $iface; then
+                return 0
+            fi
             local_addr_key=local-ipv4s
             subnet_pd_key=ipv4-prefix
             ;;
         6)
+            if ! subnet_supports_ipv6 $iface; then
+                return 0
+            fi
             local_addr_key=ipv6s
             subnet_pd_key=ipv6-prefix
             ;;
@@ -175,7 +208,7 @@ create_rules() {
     # error, rather than an empty response, if no prefixes are
     # assigned, so we are unable to distinguish between a service
     # error and a successful but empty response
-    prefixes=$(get_iface_imds ${ether} ${subnet_pd_key} || true)
+    prefixes=$(get_iface_imds ${ether} ${subnet_pd_key} 1 || true)
 
     local source
     local file="$drop_in_dir/ec2net_policy_${family}.conf"
