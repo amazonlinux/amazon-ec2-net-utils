@@ -345,6 +345,21 @@ setup_interface() {
     echo $changes
 }
 
+maybe_reload_networkd() {
+    rm -f /run/setup-policy-routes/$$
+    if rmdir /run/setup-policy-routes/ 2> /dev/null; then
+        if [ -e /run/policy-routes-reload-networkd ]; then
+            rm -f /run/policy-routes-reload-networkd 2> /dev/null
+            networkctl reload
+            info "Reloaded networkd"
+        else
+            info "No networkd reload needed"
+        fi
+    else
+        info "Deferring networkd reload to another process"
+    fi
+}
+
 iface="$1"
 [ -n "$iface" ] || { error "Invocation error"; exit 1; }
 
@@ -369,6 +384,9 @@ stop)
     rm -fr "${runtimedir}/70-${iface}.network" "${runtimedir}/70-${iface}.network.d"
     ;;
 *)
+    mkdir -p /run/setup-policy-routes/
+    trap 'error "Called trap" ; maybe_reload_networkd' EXIT
+    touch /run/setup-policy-routes/$$
     while [ ! -e "/sys/class/net/${iface}" ]; do
         debug  "Waiting for sysfs node to exist"
         sleep 0.1
@@ -396,10 +414,8 @@ stop)
         changes+=$(setup_interface $iface $ether secondary)
     fi
     if [ $changes -gt 0 ]; then
-        info "Reloading networkd"
-        networkctl reload
+        touch /run/policy-routes-reload-networkd
     fi
-
     ;;
 esac
 
