@@ -345,6 +345,9 @@ setup_interface() {
     echo $changes
 }
 
+# All instances of this process that may reconfigure networkd register
+# themselves as such. When exiting, they'll reload networkd only if
+# they're the registered process running.
 maybe_reload_networkd() {
     rm -f /run/setup-policy-routes/$$
     if rmdir /run/setup-policy-routes/ 2> /dev/null; then
@@ -358,6 +361,16 @@ maybe_reload_networkd() {
     else
         info "Deferring networkd reload to another process"
     fi
+}
+
+register_networkd_reloader() {
+    local -i registered=1
+    while [ $registered -ne 0 ]; do
+        mkdir -p /run/setup-policy-routes/
+        trap 'error "Called trap" ; maybe_reload_networkd' EXIT
+        touch /run/setup-policy-routes/$$
+        registered=$?
+    done
 }
 
 iface="$1"
@@ -374,6 +387,7 @@ stop)
         exit 0
     fi
 
+    register_networkd_reloader
     ruleid=$(cat /run/network/$iface/pref)
     test -n "$ruleid"
     info "Stopping $iface. Will remove rule $ruleid"
@@ -384,9 +398,7 @@ stop)
     rm -fr "${runtimedir}/70-${iface}.network" "${runtimedir}/70-${iface}.network.d"
     ;;
 *)
-    mkdir -p /run/setup-policy-routes/
-    trap 'error "Called trap" ; maybe_reload_networkd' EXIT
-    touch /run/setup-policy-routes/$$
+    register_networkd_reloader
     while [ ! -e "/sys/class/net/${iface}" ]; do
         debug  "Waiting for sysfs node to exist"
         sleep 0.1
