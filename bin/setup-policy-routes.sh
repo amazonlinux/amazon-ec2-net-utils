@@ -254,6 +254,16 @@ Table=${tableid}
 Gateway=_ipv6ra
 [IPv6AcceptRA]
 RouteTable=${tableid}
+[Route]
+Gateway=_dhcp4
+Metric=${tableid}
+Destination=0.0.0.0/0
+Table=main
+[Route]
+Gateway=_ipv6ra
+Metric=${tableid}
+Destination=::/0
+Table=main
 EOF
     fi
     mv "${dropin}.tmp" "$dropin"
@@ -273,20 +283,14 @@ add_altname() {
 
 create_interface_config() {
     local iface=$1
-    local tableid=$2
+    local ifid=$2
     local ether=$3
 
     local libdir=/usr/lib/systemd/network
-    local primarynetwork="${libdir}/80-ec2-primary.network"
-    local secondarynetwork="${libdir}/85-ec2-secondary.network"
-    local target="${secondarynetwork}"
+    local defconfig="${libdir}/80-ec2.network"
 
     local -i retval=0
 
-    if [ "$tableid" = "0" ]; then
-        # This is the "primary" interface
-        target="${primarynetwork}"
-    fi
     local cfgfile="${runtimedir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
         info "Using existing cfgfile ${cfgfile}"
@@ -294,10 +298,10 @@ create_interface_config() {
         return
     fi
 
-    info "Linking $cfgfile to $target"
+    info "Linking $cfgfile to $defconfig"
     mkdir -p "$runtimedir"
-    ln -s "$target" "$cfgfile"
-    retval+=$(create_if_overrides "$iface" "$tableid" "$ether" "$cfgfile")
+    ln -s "$defconfig" "$cfgfile"
+    retval+=$(create_if_overrides "$iface" "$ifid" "$ether" "$cfgfile")
     add_altname "$iface" "$ether"
     echo $retval
 }
@@ -305,10 +309,9 @@ create_interface_config() {
 # The primary interface is configured to use the 'main' route table,
 # secondary interfaces get a private route table for both IPv4 and v6
 setup_interface() {
-    local iface ether type
+    local iface ether
     iface=$1
     ether=$2
-    type=$3
 
     # Newly provisioned resources (new ENI attachments) take some
     # time to be fully reflected in IMDS. In that case, we poll
@@ -320,21 +323,17 @@ setup_interface() {
     deadline=$(date -d "now+30 seconds" +%s)
     while [ "$(date +%s)" -lt $deadline ]; do
         local -i changes=0
-        if [ "$type" = primary ]; then
-            changes+=$(create_interface_config "$iface" 0 "$ether" 512)
-        else
-            local -i index ruleid
-            index=$(cat /sys/class/net/${iface}/ifindex)
-            [ -n "$index" ] || { error "Unable to get index of $iface" ; exit 2; }
-            ruleid=$((index+10000))
-            mkdir -p /run/network/$iface
-            echo $ruleid > /run/network/$iface/pref
+        local -i index ruleid
+        index=$(echo $iface | tr -d a-z)
+        [ -n "$index" ] || { error "Unable to get index of $iface" ; exit 2; }
+        ruleid=$((index+10000))
+        mkdir -p /run/network/$iface
+        echo $ruleid > /run/network/$iface/pref
 
-            changes+=$(create_interface_config "$iface" "$ruleid" "$ether")
-            for family in 4 6; do
-                changes+=$(create_rules "$iface" "$ruleid" $family)
-            done
-        fi
+        changes+=$(create_interface_config "$iface" "$ruleid" "$ether")
+        for family in 4 6; do
+            changes+=$(create_rules "$iface" "$ruleid" $family)
+        done
         changes+=$(create_ipv4_aliases $iface $ether)
 
         if [ ! -v EC2_IF_INITIAL_SETUP ] ||
@@ -407,24 +406,12 @@ start)
     debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
     /lib/systemd/systemd-networkd-wait-online -i "$iface"
     ether=$(cat /sys/class/net/${iface}/address)
-    imds_ether=$(get_imds mac)
-    [ -n "$ether" ] || { error "Unable to identify MAC address for $iface" ; exit 2; }
-    [ -n "$imds_ether" ] || { error "Unable to get MAC address from IMDS for $iface" ; exit 2; }
 
     declare -i changes=0
     # Ideally we'd use the device-number interface property from IMDS,
     # but interface details take some time to propagate, and IMDS
     # reports 0 for the device-number prior to propagation...
-    if [ "$ether" = "$imds_ether" ]; then
-        info "Configuring $iface as primary"
-        # We don't give the "primary" interface a custom route table,
-        # but do override its route metric to ensure that it is
-        # preferred over any other route that might appear in the main
-        # table:
-        changes+=$(setup_interface $iface $ether primary)
-    else
-        changes+=$(setup_interface $iface $ether secondary)
-    fi
+    changes+=$(setup_interface $iface $ether)
     if [ $changes -gt 0 ]; then
         touch /run/policy-routes-reload-networkd
     fi
