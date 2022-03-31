@@ -21,6 +21,8 @@ declare -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::25
 declare -r imds_token_path="api/token"
 declare -r syslog_facility="user"
 declare -r syslog_tag="ec2net"
+declare -i -r rule_base=10000
+declare -i -r metric_base=512
 declare imds_endpoint imds_token
 
 get_token() {
@@ -172,12 +174,15 @@ subnet_supports_ipv6() {
 
 create_rules() {
     local iface=$1
-    local ruleid=$2
+    local ifid=$2
     local family=$3
     local addrs prefixes
     local local_addr_key subnet_pd_key
     local drop_in_dir="${runtimedir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
+
+    local -i ruleid=$((ifid+rule_base))
+
     case $family in
         4)
             if ! subnet_supports_ipv4 $iface; then
@@ -228,11 +233,15 @@ EOF
 
 create_if_overrides() {
     local iface="$1"; test -n "$iface" || { echo "Invalid iface at $LINENO" >&2 ; exit 1; }
-    local tableid="$2"; test -n "$tableid" || { echo "Invalid tableid at $LINENO" >&2 ; exit 1; }
+    local ifid="$2"; test -n "$ifid" || { echo "Invalid ifid at $LINENO" >&2 ; exit 1; }
     local ether="$3"; test -n "$ether" || { echo "Invalid ether at $LINENO" >&2 ; exit 1; }
     local cfgfile="$4"; test -n "$cfgfile" || { echo "Invalid cfgfile at $LINENO" >&2 ; exit 1; }
+
     local cfgdir="${cfgfile}.d"
     local dropin="${cfgdir}/eni.conf"
+    local -i metric=$((metric_base+ifid))
+    local -i tableid=$((rule_base+ifid))
+
     mkdir -p "$cfgdir"
     if [ $tableid -eq 0 ]; then
         # primary, just match on MAC
@@ -256,12 +265,12 @@ Gateway=_ipv6ra
 RouteTable=${tableid}
 [Route]
 Gateway=_dhcp4
-Metric=${tableid}
+Metric=${metric}
 Destination=0.0.0.0/0
 Table=main
 [Route]
 Gateway=_ipv6ra
-Metric=${tableid}
+Metric=${metric}
 Destination=::/0
 Table=main
 EOF
@@ -306,8 +315,14 @@ create_interface_config() {
     echo $retval
 }
 
-# The primary interface is configured to use the 'main' route table,
-# secondary interfaces get a private route table for both IPv4 and v6
+# Interfaces get configured with addresses and routes from
+# DHCP. Routes are inserted in the main table with metrics based on
+# their physical location (slot ID) to ensure deterministic route
+# ordering.  Interfaces also get policy routing rules based on source
+# address matching and ensuring that all egress traffic with one of
+# the interface's IPs (primary or secondary, IPv4 or IPv6, including
+# addresses from delegated prefixes) will be routing according to an
+# interface-specific routing table.
 setup_interface() {
     local iface ether
     iface=$1
@@ -323,16 +338,15 @@ setup_interface() {
     deadline=$(date -d "now+30 seconds" +%s)
     while [ "$(date +%s)" -lt $deadline ]; do
         local -i changes=0
-        local -i index ruleid
-        index=$(echo $iface | tr -d a-z)
-        [ -n "$index" ] || { error "Unable to get index of $iface" ; exit 2; }
-        ruleid=$((index+10000))
+        local -i ifid
+        ifid=$(echo $iface | tr -d a-z)
+        [ -n "$ifid" ] || { error "Unable to get index of $iface" ; exit 2; }
         mkdir -p /run/network/$iface
-        echo $ruleid > /run/network/$iface/pref
+        echo $ifid > /run/network/$iface/pref
 
-        changes+=$(create_interface_config "$iface" "$ruleid" "$ether")
+        changes+=$(create_interface_config "$iface" "$ifid" "$ether")
         for family in 4 6; do
-            changes+=$(create_rules "$iface" "$ruleid" $family)
+            changes+=$(create_rules "$iface" "$ifid" $family)
         done
         changes+=$(create_ipv4_aliases $iface $ether)
 
