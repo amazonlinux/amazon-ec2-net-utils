@@ -367,7 +367,7 @@ register_networkd_reloader() {
     local -i registered=1
     while [ $registered -ne 0 ]; do
         mkdir -p /run/setup-policy-routes/
-        trap 'error "Called trap" ; maybe_reload_networkd' EXIT
+        trap 'debug "Called trap" ; maybe_reload_networkd' EXIT
         touch /run/setup-policy-routes/$$
         registered=$?
     done
@@ -397,7 +397,7 @@ stop)
     rm -rf "/run/network/$iface"
     rm -fr "${runtimedir}/70-${iface}.network" "${runtimedir}/70-${iface}.network.d"
     ;;
-*)
+start)
     register_networkd_reloader
     while [ ! -e "/sys/class/net/${iface}" ]; do
         debug  "Waiting for sysfs node to exist"
@@ -428,6 +428,11 @@ stop)
     if [ $changes -gt 0 ]; then
         touch /run/policy-routes-reload-networkd
     fi
+    ;;
+*)
+    echo "USAGE: $0: start|stop"
+    echo "  This tool is normally invoked via udev rules."
+    echo "  See https://github.com/amazonlinux/amazon-ec2-net-utils"
     ;;
 esac
 
