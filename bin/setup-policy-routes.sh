@@ -194,10 +194,10 @@ EOF
 }
 
 create_if_overrides() {
-    local iface="$1"
-    local tableid="$2"
-    local ether="$3"
-    local cfgfile="$4"
+    local iface="$1"; test -n "$iface" || { echo "Invalid iface at $LINENO" >&2 ; exit 1; }
+    local tableid="$2"; test -n "$tableid" || { echo "Invalid tableid at $LINENO" >&2 ; exit 1; }
+    local ether="$3"; test -n "$ether" || { echo "Invalid ether at $LINENO" >&2 ; exit 1; }
+    local cfgfile="$4"; test -n "$cfgfile" || { echo "Invalid cfgfile at $LINENO" >&2 ; exit 1; }
     local cfgdir="${cfgfile}.d"
     local dropin="${cfgdir}/eni.conf"
     mkdir -p "$cfgdir"
