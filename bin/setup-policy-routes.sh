@@ -234,7 +234,7 @@ add_altname() {
     eni_id=$(get_iface_imds "$ether" interface-id)
     if [ -n "$eni_id" ] &&
            ! ip link show dev "$iface" | grep -q -E "altname\s+${eni_id}"; then
-        ip link property add dev "$iface" altname "$eni_id"
+        ip link property add dev "$iface" altname "$eni_id" || true
     fi
 }
 
