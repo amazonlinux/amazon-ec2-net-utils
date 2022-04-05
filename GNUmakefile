@@ -4,8 +4,8 @@ version=2.0.0
 # Used by 'install'
 PREFIX?=/usr/local
 BINDIR=${DESTDIR}${PREFIX}/bin
-UDEVDIR=${DESTDIR}/etc/udev/rules.d
-SYSTEMDDIR=${DESTDIR}/etc/systemd
+UDEVDIR=${DESTDIR}/usr/lib/udev/rules.d
+SYSTEMDDIR=${DESTDIR}/usr/lib/systemd
 SYSTEMD_SYSTEM_DIR=${SYSTEMDDIR}/system
 SYSTEMD_NETWORK_DIR=${SYSTEMDDIR}/network
 SYSCTL_DIR=${DESTDIR}/etc/sysctl.d
