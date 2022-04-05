@@ -5,7 +5,7 @@ Summary: utilities for managing network interfaces in Amazon EC2
 
 License: Apache 2.0
 URL:     https://github.com/aws/amazon-ec2-net-utils/
-Source0: amazon-ec2-net-utils-%{version}.tar.xz
+Source0: amazon-ec2-net-utils-%{version}.tar.gz
 
 BuildArch: noarch
 
