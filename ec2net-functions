@@ -412,6 +412,10 @@ rewrite_rules_v4() {
     return
   fi
 
+  if ! subnet_supports_ipv4 "$new_ip_address"; then
+    return
+  fi
+
   ips=($(get_ipv4s))
   if [ $? -gt 0 ]; then
     # If we get an error fetching the list of IPs from IMDS,
