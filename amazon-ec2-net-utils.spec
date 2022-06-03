@@ -44,29 +44,32 @@ setup_policy_routes() {
 	eval $(udevadm info --export --query=property /sys/class/net/$iface)
 	case $ID_NET_DRIVER in
 	    ena|ixgbevf|vif)
-		systemctl start policy-routes@${iface}.service
+		systemctl restart policy-routes@${iface}.service
 		systemctl start refresh-policy-routes@${iface}.timer
-		;;
-	    *)
-		echo "Skipping $iface with driver $ID_NET_DRIVER"
 		;;
 	esac
     done
 }
 
-if [ $1 == 1 ]; then
+if [ $1 -eq 1 ]; then
+    # This is a new install
     systemctl enable systemd-networkd.service
     systemctl enable systemd-resolved.service
     systemctl disable NetworkManager-wait-online.service
     systemctl disable NetworkManager.service
     [ -f /etc/resolv.conf ] && mv /etc/resolv.conf /etc/resolv.conf.old
     ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
-    if [ -d /run/systemd ]; then
+    if [ -d /run/systemd/system ]; then
 	systemctl stop NetworkManager.service
 	systemctl start systemd-networkd.service
 	setup_policy_routes
 	systemctl start systemd-resolved.service
     fi
+elif [ $1 -gt 1 ]; then
+    # This is an upgrade, there's less setup to do, but we do want to
+    # ensure we apply any configuration introduced by the new version
+    systemctl daemon-reload
+    setup_policy_routes
 fi
 
 %changelog
