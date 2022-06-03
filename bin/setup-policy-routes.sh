@@ -103,15 +103,6 @@ get_iface_imds() {
     get_imds network/interfaces/macs/${mac}/${key} $max_tries | sort
 }
 
-flush_rules() {
-    local ruleid=$1
-    local family=${2:-4}
-    info "Flushing IPv${family} rule ID ${ruleid}"
-    while [ -n "$(ip -${family} rule show pref $ruleid)" ]; do
-            ip -${family} rule del pref $ruleid
-    done
-}
-
 _install_and_reload() {
     local src=$1
     local dest=$2
@@ -411,22 +402,11 @@ get_token
 
 case "$2" in
 stop)
-    # Note that we can't rely on IMDS or on local state
-    # (e.g. interface configuration) here, since the interface may
-    # have already been detached from the instance
-    if [ ! -e "/run/network/$iface/pref" ]; then
-        exit 0
-    fi
-
     register_networkd_reloader
-    ruleid=$(cat /run/network/$iface/pref)
-    test -n "$ruleid"
-    info "Stopping $iface. Will remove rule $ruleid"
-    for family in 4 6; do
-        flush_rules $ruleid $family
-    done
-    rm -rf "/run/network/$iface"
-    rm -fr "${runtimedir}/70-${iface}.network" "${runtimedir}/70-${iface}.network.d"
+    info "Stopping $iface."
+    rm -rf "/run/network/$iface" \
+       "${runtimedir}/70-${iface}.network" \
+       "${runtimedir}/70-${iface}.network.d"
     ;;
 start)
     register_networkd_reloader
