@@ -162,13 +162,19 @@ EOF
 
 subnet_supports_ipv4() {
     local iface=$1
-    test -n "$iface" || return 1
+    if [ -z "$iface" ]; then
+        err "${FUNCNAME[0]} called without an interface"
+        return 1
+    fi
     ip -4 addr show dev "$iface" scope global | sed -n -E 's,^.*inet (\S+).*,\1,p' | grep -E -q -v '^169\.254\.'
 }
 
 subnet_supports_ipv6() {
     local iface=$1
-    test -n "$iface" || return 1
+    if [ -z "$iface" ]; then
+        err "${FUNCNAME[0]} called without an interface"
+        return 1
+    fi
     ip -6 addr show dev "$iface" scope global | grep -q inet6
 }
 
