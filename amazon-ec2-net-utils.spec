@@ -11,6 +11,7 @@ BuildArch: noarch
 
 BuildRequires: make
 Requires: systemd-networkd, udev, curl, iproute
+Requires: (systemd-resolved or systemd < 250)
 
 %description
 amazon-ec2-net-utils-ng provides udev integration and helper utilities
