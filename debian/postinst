@@ -53,7 +53,7 @@ case "$1" in
 	[ -f /etc/resolv.conf ] && mv /etc/resolv.conf /etc/resolv.conf.old
 	ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
-	if [ -d /run/systemd ]; then
+	if [ -d /run/systemd/system ]; then
 	    ifdown --all
 	    systemctl start systemd-networkd.service
 	    setup_policy_routes
