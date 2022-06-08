@@ -54,7 +54,10 @@ case "$1" in
 	ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
 	if [ -d /run/systemd/system ]; then
-	    ifdown --all
+	    if [ command -v ifdown > /dev/null 2>&1 ]; then
+		# If we're migrating from ifupdown, we'll restart the interfaces:
+		ifdown --all
+	    fi
 	    systemctl start systemd-networkd.service
 	    setup_policy_routes
 	    systemctl start systemd-resolved.service
