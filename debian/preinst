@@ -13,18 +13,18 @@ set -e
 
 case "$1" in
     install|upgrade)
-	dpkg-divert --package amazon-ec2-net-utils --add --rename \
-		    --divert /etc/udev/rules.d/75-cloud-ifupdown.rules.disabled \
-		    /etc/udev/rules.d/75-cloud-ifupdown.rules
-    ;;
-
+        dpkg-divert --package amazon-ec2-net-utils --add --rename \
+                    --divert /etc/udev/rules.d/75-cloud-ifupdown.rules.disabled \
+                    /etc/udev/rules.d/75-cloud-ifupdown.rules
+        ;;
+    
     abort-upgrade)
-    ;;
-
+        ;;
+    
     *)
         echo "preinst called with unknown argument \`$1'" >&2
         exit 1
-    ;;
+        ;;
 esac
 
 # dh_installdeb will replace this with shell code automatically

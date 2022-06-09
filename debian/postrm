@@ -18,16 +18,16 @@ set -e
 
 case "$1" in
     purge|remove)
-	dpkg-divert --package amazon-ec2-net-utils --remove --rename \
-		    --divert /etc/udev/rules.d/75-cloud-ifupdown.rules.disabled \
-		    /etc/udev/rules.d/75-cloud-ifupdown.rules
-    ;;
+        dpkg-divert --package amazon-ec2-net-utils --remove --rename \
+                    --divert /etc/udev/rules.d/75-cloud-ifupdown.rules.disabled \
+                    /etc/udev/rules.d/75-cloud-ifupdown.rules
+        ;;
     upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-    ;;
+        ;;
     *)
         echo "postrm called with unknown argument \`$1'" >&2
         exit 1
-    ;;
+        ;;
 esac
 
 # dh_installdeb will replace this with shell code automatically
