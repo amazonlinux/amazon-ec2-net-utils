@@ -11,13 +11,13 @@ LLMNR=no
 DNSDefaultRoute=yes
 
 [DHCPv4]
-UseHostname=yes
+UseHostname=no
 UseDNS=yes
 UseNTP=yes
 UseDomains=yes
 
 [DHCPv6]
-UseHostname=yes
+UseHostname=no
 UseDNS=yes
 UseNTP=yes
 WithoutRA=solicit
