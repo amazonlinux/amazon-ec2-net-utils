@@ -31,43 +31,46 @@ set -e
 setup_policy_routes() {
     local iface node
     for node in /sys/class/net/*; do
-	iface=$(basename $node)
-	unset ID_NET_DRIVER
-	eval $(udevadm info --export --query=property /sys/class/net/$iface)
-	case $ID_NET_DRIVER in
-	    ena|ixgbevf|vif)
-		systemctl start policy-routes@${iface}.service
-		systemctl start refresh-policy-routes@${iface}.timer
-		;;
-	    *)
-		echo "Skipping $iface with driver $ID_NET_DRIVER"
-		;;
-	esac
+        iface=$(basename $node)
+        unset ID_NET_DRIVER
+        eval $(udevadm info --export --query=property /sys/class/net/$iface)
+        case $ID_NET_DRIVER in
+            ena|ixgbevf|vif)
+                systemctl start policy-routes@${iface}.service
+                systemctl start refresh-policy-routes@${iface}.timer
+                ;;
+            *)
+                echo "Skipping $iface with driver $ID_NET_DRIVER"
+                ;;
+        esac
     done
 }
 
 case "$1" in
     configure)
-	systemctl enable systemd-networkd.service
-	systemctl enable systemd-resolved.service
-	[ -f /etc/resolv.conf ] && mv /etc/resolv.conf /etc/resolv.conf.old
-	ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+        systemctl enable systemd-networkd.service
+        systemctl enable systemd-resolved.service
+        [ -f /etc/resolv.conf ] && mv /etc/resolv.conf /etc/resolv.conf.old
+        ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
-	if [ -d /run/systemd ]; then
-	    ifdown --all
-	    systemctl start systemd-networkd.service
-	    setup_policy_routes
-	    systemctl start systemd-resolved.service
-	fi
-    ;;
+        if [ -d /run/systemd/system ]; then
+            if [ command -v ifdown > /dev/null 2>&1 ]; then
+                # If we're migrating from ifupdown, we'll restart the interfaces:
+                ifdown --all
+            fi
+            systemctl start systemd-networkd.service
+            setup_policy_routes
+            systemctl start systemd-resolved.service
+        fi
+        ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
-    ;;
+        ;;
 
     *)
         echo "postinst called with unknown argument \`$1'" >&2
         exit 1
-    ;;
+        ;;
 esac
 
 # dh_installdeb will replace this with shell code automatically
