@@ -252,27 +252,24 @@ MACAddress=${ether}
 [Network]
 DHCP=${dhcp}
 [DHCPv4]
-RouteTable=${tableid}
+RouteMetric=${metric}
+[DHCPv6]
+RouteMetric=${metric}
 [Route]
 Table=${tableid}
 Gateway=_ipv6ra
-[IPv6AcceptRA]
-RouteTable=${tableid}
 [Route]
+Table=main
 Gateway=_ipv6ra
 Metric=${metric}
-Destination=::/0
-Table=main
 EOF
-    fi
+
     if [ "$dhcp" != "ipv6" ]; then
         # if we're not in a v6-only network, add IPv4 routes to the main table with a custom metric
         cat <<EOF >> "${dropin}.tmp"
 [Route]
 Gateway=_dhcp4
-Metric=${metric}
-Destination=0.0.0.0/0
-Table=main
+Table=${tableid}
 EOF
     fi
     mv "${dropin}.tmp" "$dropin"
