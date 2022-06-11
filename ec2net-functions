@@ -156,8 +156,38 @@ get_primary_ipv4() {
 get_secondary_ipv4s() {
   ipv4s=($(get_ipv4s))
   ec=$?
+  if should_provision_prefix_ips "${config_file}"; then
+    ipv4s+=($(get_delegated_ipv4s $dpfx))
+  fi
   echo "${ipv4s[@]:1}"
   return $ec
+}
+
+get_delegated_ipv4s() {
+  for dpfx in $(get_delegated_prefix ipv4); do
+    get_cidr_ipv4s $dpfx
+  done
+}
+
+get_cidr_ipv4s() {
+  local ipv4_cidr=$1
+  local so1 so2 so3 so4 eo1 eo2 eo3 eo4
+
+  local ipv4_start=$(ipcalc -n $ipv4_cidr | cut -f2 -d=)
+  local ipv4_end=$(ipcalc -b $ipv4_cidr | cut -f2 -d=)
+
+  IFS=. read -r so1 so2 so3 so4 <<< "$ipv4_start"
+  IFS=. read -r eo1 eo2 eo3 eo4 <<< "$ipv4_end"
+
+  for ((i1=$so1; i1<=$eo1; i1++)); do
+    for ((i2=$so2; i2<=$eo2; i2++)); do
+      for ((i3=$so3; i3<=$eo3; i3++)); do
+        for ((i4=$so4; i4<=$eo4; i4++)); do
+          echo $i1.$i2.$i3.$i4
+        done
+      done
+    done
+  done
 }
 
 get_delegated_prefix() {
@@ -166,7 +196,7 @@ get_delegated_prefix() {
     # there's a prefix delegated to this interface.  So when probing
     # for prefix keys, set the get_meta max attempts parameter to 1
     local prefix_tries=1
-    local prefixes=($(get_meta "${af}-prefix" $prefix_tries))
+    local prefixes=($(get_meta "${af}-prefix" $prefix_tries|sort -V))
     ec=$?
     echo "${prefixes[@]}"
     return $ec
@@ -260,6 +290,7 @@ rewrite_primary() {
 	HWADDR=${HWADDR}
 	DEFROUTE=no
 	EC2SYNC=yes
+	EC2PROVISIONPFXIPS=${EC2PROVISIONPFXIPS}
 	MAINROUTETABLE=${MAINROUTETABLE}
 EOF
 
