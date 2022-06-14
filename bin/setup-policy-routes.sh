@@ -157,7 +157,8 @@ subnet_supports_ipv4() {
         err "${FUNCNAME[0]} called without an interface"
         return 1
     fi
-    ip -4 addr show dev "$iface" scope global | sed -n -E 's,^.*inet (\S+).*,\1,p' | grep -E -q -v '^169\.254\.'
+    ! ip -4 addr show dev "$iface" scope global | \
+        sed -n -E 's,^.*inet (\S+).*,\1,p' | grep -E -q '^169\.254\.'
 }
 
 subnet_supports_ipv6() {
