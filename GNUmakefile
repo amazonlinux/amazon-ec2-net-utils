@@ -9,12 +9,14 @@ SYSTEMDDIR=${DESTDIR}/usr/lib/systemd
 SYSTEMD_SYSTEM_DIR=${SYSTEMDDIR}/system
 SYSTEMD_NETWORK_DIR=${SYSTEMDDIR}/network
 SYSCTL_DIR=${DESTDIR}/etc/sysctl.d
+SHARE_DIR=${DESTDIR}/${PREFIX}/share/${pkgname}
 
 SHELLSCRIPTS=$(wildcard bin/*.sh)
+SHELLLIBS=$(wildcard lib/*.sh)
 UDEVRULES=$(wildcard udev/*.rules)
 SYSCTL_FILES=$(wildcard sysctl/*.conf)
 
-DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SYSCTL_DIR}
+DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SYSCTL_DIR} ${SHARE_DIR}
 
 DIST_TARGETS=dist-xz dist-gz
 
@@ -25,9 +27,15 @@ help: ## show help
 ${DIRS}:
 	install -d $@
 
+define varsubst
+sed -i "s,AMAZON_EC2_NET_UTILS_LIBDIR,${PREFIX}/share/${pkgname},g" $1
+endef
+
 .PHONY: install
-install: ${SHELLSCRIPTS} ${UDEVRULES} ${SYSCTL_FILES} | ${DIRS} ## Install the software. Respects DESTDIR
-	$(foreach f,${SHELLSCRIPTS},install -m755 $f ${BINDIR}/$$(basename --suffix=.sh $f);)
+install: ${SHELLSCRIPTS} ${UDEVRULES} ${SYSCTL_FILES} ${SHELLLIBS} | ${DIRS} ## Install the software. Respects DESTDIR
+	$(foreach f,${SHELLSCRIPTS},tgt=${BINDIR}/$$(basename --suffix=.sh $f);\
+		install -m755 $f $$tgt;${call varsubst,$$tgt};)
+	$(foreach f,${SHELLLIBS},install -m644 $f ${SHARE_DIR})
 	$(foreach f,${UDEVRULES},install -m644 $f ${UDEVDIR};)
 	$(foreach f,$(wildcard systemd/network/*.network),install -m644 $f ${SYSTEMD_NETWORK_DIR};)
 	$(foreach f,$(wildcard systemd/system/*.service systemd/system/*.timer),install -m644 $f ${SYSTEMD_SYSTEM_DIR};)
@@ -35,7 +43,7 @@ install: ${SHELLSCRIPTS} ${UDEVRULES} ${SYSCTL_FILES} | ${DIRS} ## Install the s
 
 .PHONY: check
 check: ## Run tests
-	@set -x; for script in ${SHELLSCRIPTS}; do \
+	@set -x; for script in ${SHELLSCRIPTS} ${SHELLLIBS}; do \
 		shellcheck --severity warning $${script};\
 	done
 

@@ -11,7 +11,7 @@ jobs:
       - checkout
       - run:
           name: "shellcheck"
-          command: "shellcheck -s bash -S warning bin/*.sh"
+          command: "shellcheck -s bash -S warning bin/*.sh lib/*.sh"
   al2022-rpm-scratch:
     docker:
       - image: public.ecr.aws/amazonlinux/amazonlinux:2022

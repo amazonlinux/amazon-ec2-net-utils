@@ -34,6 +34,7 @@ make install DESTDIR=%{buildroot} PREFIX=/usr
 /usr/lib/udev/rules.d/98-eni.rules
 /usr/lib/udev/rules.d/99-vpc-policy-routes.rules
 %{_bindir}/setup-policy-routes
+%{_datarootdir}/amazon-ec2-net-utils/lib.sh
 
 %post
 
