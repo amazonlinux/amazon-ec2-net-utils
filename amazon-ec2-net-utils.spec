@@ -6,7 +6,7 @@
 
 Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
-Version:   1.6.1
+Version:   1.7.0
 Release:   1%{?dist}
 License:   MIT and GPLv2
 
@@ -89,6 +89,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Tue Jun 21 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.7.0-1.amzn2
+- Update to upstream release 1.7.0
+- Add support for the EC2PROVISIONPFXIPS ifcfg setting
+- Bug: Persistent naming rules are not generated for ENA devices #48
+- Bug: 1.x: calls ec2ifup for vlan interfaces #49
+
 * Thu Mar  3 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.6.1-1
 - Update to upstream release 1.6.1.
 - Update dhclient dependency to require at least 4.2.5-77.amzn2.1.5,
