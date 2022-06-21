@@ -1,5 +1,5 @@
 Name:    amazon-ec2-net-utils
-Version: 2.1.1
+Version: 2.2.0
 Release: 1%{?dist}
 Summary: utilities for managing network interfaces in Amazon EC2
 
