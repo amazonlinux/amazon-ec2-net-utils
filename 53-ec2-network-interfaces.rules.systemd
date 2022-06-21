@@ -4,5 +4,5 @@
 # for the specific language governing permissions and limitations under
 # the License.
 
-ACTION=="add", SUBSYSTEM=="net", KERNEL=="eth*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="ec2net-ifup@$env{INTERFACE}"
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="eth*", DEVPATH!="/devices/virtual/*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="ec2net-ifup@$env{INTERFACE}"
 ACTION=="remove", SUBSYSTEM=="net", KERNEL=="eth*", RUN+="/usr/sbin/ec2ifdown $env{INTERFACE}"
