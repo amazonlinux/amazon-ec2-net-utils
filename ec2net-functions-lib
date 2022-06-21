@@ -78,6 +78,22 @@ should_use_mainroutetable() {
     return 0
 }
 
+# Whether or not all IPs in a delegated prefix should be directly provisioned.
+# Defaults to no for backwards-compatability.
+# Note: Currently only supported for IPv4.
+should_provision_prefix_ips() {
+    local config_file="$1"
+    if [ -s "$config_file" ]; then
+        local provision_prefix_ips
+        provision_prefix_ips=$(LANG=C grep -l "^[[:space:]]*EC2PROVISIONPFXIPS=yes\([[:space:]#]\|$\)" $config_file)
+        if [ "${provision_prefix_ips}" == "${config_file}" ]; then
+            logger --tag ec2net "${interface} prefix ips should be provisioned"
+            return 0
+        fi
+    fi
+    return 1
+}
+
 # Local Variables:
 # mode: shell-script
 # tab-width: 4

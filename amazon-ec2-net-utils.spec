@@ -16,6 +16,7 @@ URL:       https://github.com/aws/amazon-ec2-net-utils
 BuildArch: noarch
 Requires:  curl
 Requires:  iproute
+Requires:  initscripts
 BuildRequires: make
 BuildRequires: systemd
 %if %{systemd}
