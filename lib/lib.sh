@@ -270,14 +270,24 @@ EOF
     echo 1
 }
 
-add_altname() {
+add_altnames() {
     local iface=$1
     local ether=$2
-    local eni_id
+    local eni_id device_number
     eni_id=$(get_iface_imds "$ether" interface-id)
+    device_number=$(get_iface_imds "$ether" device-number)
+    # Interface altnames can also be added using systemd .link files.
+    # However, in order to use them, we need to wait until a
+    # systemd-networkd reload operation completes and then trigger a
+    # udev "move" event.  We avoid that overhead by adding the
+    # altnames directly using ip(8).
     if [ -n "$eni_id" ] &&
            ! ip link show dev "$iface" | grep -q -E "altname\s+${eni_id}"; then
         ip link property add dev "$iface" altname "$eni_id" || true
+    fi
+    if [ -n "$device_number" ] &&
+           ! ip link show dev "$iface" | grep -q -E "altname\s+device-number"; then
+        ip link property add dev "$iface" altname "device-number-${device_number}" || true
     fi
 }
 
@@ -302,7 +312,7 @@ create_interface_config() {
     mkdir -p "$runtimedir"
     ln -s "$defconfig" "$cfgfile"
     retval+=$(create_if_overrides "$iface" "$ifid" "$ether" "$cfgfile")
-    add_altname "$iface" "$ether"
+    add_altnames "$iface" "$ether"
     echo $retval
 }
 
