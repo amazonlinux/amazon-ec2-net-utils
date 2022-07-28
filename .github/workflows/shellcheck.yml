@@ -1,0 +1,20 @@
+name: shellcheck
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get -y install shellcheck
+    - name: Run shellcheck
+      run: shellcheck -s bash -S warning bin/*.sh lib/*.sh
