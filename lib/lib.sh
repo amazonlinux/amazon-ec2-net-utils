@@ -98,7 +98,7 @@ get_iface_imds() {
     local mac=$1
     local key=$2
     local max_tries=${3:-10}
-    get_imds network/interfaces/macs/${mac}/${key} $max_tries | sort
+    get_imds network/interfaces/macs/${mac}/${key} $max_tries
 }
 
 _install_and_reload() {
@@ -132,7 +132,7 @@ create_ipv4_aliases() {
     local mac=$2
     local addresses
     subnet_supports_ipv4 "$iface" || return 0
-    addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2)
+    addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
     local drop_in_dir="${runtimedir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
     local file="$drop_in_dir/ec2net_alias.conf"
