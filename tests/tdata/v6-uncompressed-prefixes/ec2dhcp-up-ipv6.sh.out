@@ -1,0 +1,7 @@
+CALLED get_ipv6s
+CALLED get_meta ipv6-prefix 1
+CALLED ip -6 route show table 10002
+CALLED ip -6 rule list
+CALLED ip -6 rule list from fd02:ffff:eeee:1:2:3:2:1 lookup 10002
+CALLED ip -6 rule list from fd0a:ffff:9999:8888:0:0:0:0/80 lookup 10002
+CALLED ip -6 rule list from fd0a:ffff:eeee:dddd::/80 lookup 10002
