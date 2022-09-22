@@ -3,6 +3,9 @@ CALLED get_meta ipv6-prefix 1
 CALLED ip -6 route show table 10002
 CALLED ip -6 route add default via fe80::4:3:2:1 dev eth2 table 10002
 CALLED ip -6 rule list
+CALLED ip -6 rule list from fd01:ffff:eeee:5:4:3:2:1 lookup 10002
 CALLED ip -6 rule add from fd01:ffff:eeee:5:4:3:2:1 lookup 10002
+CALLED ip -6 rule list from fd01:ffff:eeee:5:4:3:2:2 lookup 10002
 CALLED ip -6 rule add from fd01:ffff:eeee:5:4:3:2:2 lookup 10002
+CALLED ip -6 rule list from fd0a:1234:1234:1234::/64 lookup 10002
 CALLED ip -6 rule add from fd0a:1234:1234:1234::/64 lookup 10002
