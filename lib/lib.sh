@@ -325,9 +325,12 @@ create_interface_config() {
 # addresses from delegated prefixes) will be routing according to an
 # interface-specific routing table.
 setup_interface() {
-    local iface ether
+    local iface ether default_mac
+    local -i device_number
     iface=$1
     ether=$2
+    default_mac=$(get_imds mac)
+    device_number=$(get_iface_imds "$ether" device-number)
 
     # Newly provisioned resources (new ENI attachments) take some
     # time to be fully reflected in IMDS. In that case, we poll
@@ -340,14 +343,18 @@ setup_interface() {
     while [ "$(date +%s)" -lt $deadline ]; do
         local -i changes=0
         local -i ifid
-        ifid=$(echo $iface | tr -d a-z)
+        ifid=$(echo $iface | tr -d a-zA-Z)
         [ -n "$ifid" ] || { error "Unable to get index of $iface" ; exit 2; }
         mkdir -p /run/network/$iface
         echo $ifid > /run/network/$iface/pref
 
         changes+=$(create_interface_config "$iface" "$ifid" "$ether")
         for family in 4 6; do
-            changes+=$(create_rules "$iface" "$ifid" $family)
+            if [ "$device_number" -eq 0 ] && [ "$ether" = "$default_mac" ]; then
+                debug "Skipping ipv$family rules for default ENI $iface $ether $default_mac $device_number"
+            else
+                changes+=$(create_rules "$iface" "$ifid" $family)
+            fi
         done
         changes+=$(create_ipv4_aliases $iface $ether)
 
