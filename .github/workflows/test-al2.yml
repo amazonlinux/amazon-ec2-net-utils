@@ -1,0 +1,22 @@
+name: AL2 package build
+
+on:
+  push:
+    branches: [ "1.x" ]
+  pull_request:
+    branches: [ "1.x" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the test container image (AL2)
+      run: docker build . --file .github/Dockerfile.al2-test --tag amazon-ec2-net-utils-tests:al2
+    - name: Run tests in container (AL2)
+      run: docker run -v $(readlink -f $PWD):/src -w /src amazon-ec2-net-utils-tests:al2 make test
+    - name: Build rpm in container (AL2)
+      run: docker run -v $(readlink -f $PWD):/src -w /src --entrypoint "/src/.github/container-tests-al2.sh" amazon-ec2-net-utils-tests:al2
