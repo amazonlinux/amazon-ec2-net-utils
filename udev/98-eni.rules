@@ -1,1 +1,0 @@
-SUBSYSTEM=="net", ACTION=="add", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN+="/sbin/sysctl -w net.ipv6.conf.$name.accept_dad=0"

@@ -25,13 +25,11 @@ to manage network configuration in the Amazon EC2 cloud environment
 make install DESTDIR=%{buildroot} PREFIX=/usr
 
 %files
-%{_sysconfdir}/sysctl.d/90-ipv6-dad.conf
 /usr/lib/systemd/network/80-ec2.network
 /usr/lib/systemd/system/policy-routes@.service
 /usr/lib/systemd/system/refresh-policy-routes@.service
 /usr/lib/systemd/system/refresh-policy-routes@.timer
 
-/usr/lib/udev/rules.d/98-eni.rules
 /usr/lib/udev/rules.d/99-vpc-policy-routes.rules
 %{_bindir}/setup-policy-routes
 %{_datarootdir}/amazon-ec2-net-utils/lib.sh

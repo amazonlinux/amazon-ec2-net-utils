@@ -8,15 +8,13 @@ UDEVDIR=${DESTDIR}/usr/lib/udev/rules.d
 SYSTEMDDIR=${DESTDIR}/usr/lib/systemd
 SYSTEMD_SYSTEM_DIR=${SYSTEMDDIR}/system
 SYSTEMD_NETWORK_DIR=${SYSTEMDDIR}/network
-SYSCTL_DIR=${DESTDIR}/etc/sysctl.d
 SHARE_DIR=${DESTDIR}/${PREFIX}/share/${pkgname}
 
 SHELLSCRIPTS=$(wildcard bin/*.sh)
 SHELLLIBS=$(wildcard lib/*.sh)
 UDEVRULES=$(wildcard udev/*.rules)
-SYSCTL_FILES=$(wildcard sysctl/*.conf)
 
-DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SYSCTL_DIR} ${SHARE_DIR}
+DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SHARE_DIR}
 
 DIST_TARGETS=dist-xz dist-gz
 
@@ -32,14 +30,13 @@ sed -i "s,AMAZON_EC2_NET_UTILS_LIBDIR,${PREFIX}/share/${pkgname},g" $1
 endef
 
 .PHONY: install
-install: ${SHELLSCRIPTS} ${UDEVRULES} ${SYSCTL_FILES} ${SHELLLIBS} | ${DIRS} ## Install the software. Respects DESTDIR
+install: ${SHELLSCRIPTS} ${UDEVRULES} ${SHELLLIBS} | ${DIRS} ## Install the software. Respects DESTDIR
 	$(foreach f,${SHELLSCRIPTS},tgt=${BINDIR}/$$(basename --suffix=.sh $f);\
 		install -m755 $f $$tgt;${call varsubst,$$tgt};)
 	$(foreach f,${SHELLLIBS},install -m644 $f ${SHARE_DIR})
 	$(foreach f,${UDEVRULES},install -m644 $f ${UDEVDIR};)
 	$(foreach f,$(wildcard systemd/network/*.network),install -m644 $f ${SYSTEMD_NETWORK_DIR};)
 	$(foreach f,$(wildcard systemd/system/*.service systemd/system/*.timer),install -m644 $f ${SYSTEMD_SYSTEM_DIR};)
-	$(foreach f,${SYSCTL_FILES},install -m644 $f ${SYSCTL_DIR})
 
 .PHONY: check
 check: ## Run tests
