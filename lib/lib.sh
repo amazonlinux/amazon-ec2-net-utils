@@ -236,7 +236,10 @@ create_if_overrides() {
     local cfgdir="${cfgfile}.d"
     local dropin="${cfgdir}/eni.conf"
     local -i metric=$((metric_base+ifid))
-    local -i tableid=$((rule_base+ifid))
+    local -i tableid=0
+    if [ $ifid -gt 0 ]; then
+        tableid=$((rule_base+ifid))
+    fi
 
     mkdir -p "$cfgdir"
     cat <<EOF > "${dropin}.tmp"
@@ -252,11 +255,16 @@ RouteMetric=${metric}
 [Route]
 Table=${tableid}
 Gateway=_ipv6ra
-[Route]
-Table=main
-Gateway=_ipv6ra
-Metric=${metric}
 EOF
+
+    if [ "$tableid" -gt 0 ]; then
+        cat <<EOF >> "${dropin}.tmp"
+[DHCPv4]
+RouteTable=${tableid}
+[IPv6AcceptRA]
+RouteTable=${tableid}
+EOF
+    fi
 
     if subnet_supports_ipv4 "$iface"; then
         # if we're not in a v6-only network, add IPv4 routes to the private table
@@ -342,18 +350,13 @@ setup_interface() {
     deadline=$(date -d "now+30 seconds" +%s)
     while [ "$(date +%s)" -lt $deadline ]; do
         local -i changes=0
-        local -i ifid
-        ifid=$(echo $iface | tr -d a-zA-Z)
-        [ -n "$ifid" ] || { error "Unable to get index of $iface" ; exit 2; }
-        mkdir -p /run/network/$iface
-        echo $ifid > /run/network/$iface/pref
 
-        changes+=$(create_interface_config "$iface" "$ifid" "$ether")
+        changes+=$(create_interface_config "$iface" "$device_number" "$ether")
         for family in 4 6; do
             if [ "$device_number" -eq 0 ] && [ "$ether" = "$default_mac" ]; then
                 debug "Skipping ipv$family rules for default ENI $iface $ether $default_mac $device_number"
             else
-                changes+=$(create_rules "$iface" "$ifid" $family)
+                changes+=$(create_rules "$iface" "$device_number" $family)
             fi
         done
         changes+=$(create_ipv4_aliases $iface $ether)
