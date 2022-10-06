@@ -252,28 +252,28 @@ DHCP=yes
 RouteMetric=${metric}
 [DHCPv6]
 RouteMetric=${metric}
-[Route]
-Table=${tableid}
-Gateway=_ipv6ra
 EOF
 
     if [ "$tableid" -gt 0 ]; then
         cat <<EOF >> "${dropin}.tmp"
+[Route]
+Table=${tableid}
+Gateway=_ipv6ra
 [DHCPv4]
 RouteTable=${tableid}
 [IPv6AcceptRA]
 RouteTable=${tableid}
 EOF
-    fi
-
-    if subnet_supports_ipv4 "$iface"; then
-        # if we're not in a v6-only network, add IPv4 routes to the private table
-        cat <<EOF >> "${dropin}.tmp"
+	if subnet_supports_ipv4 "$iface"; then
+            # if we're not in a v6-only network, add IPv4 routes to the private table
+            cat <<EOF >> "${dropin}.tmp"
 [Route]
 Gateway=_dhcp4
 Table=${tableid}
 EOF
+	fi
     fi
+
     mv "${dropin}.tmp" "$dropin"
     echo 1
 }
