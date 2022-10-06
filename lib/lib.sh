@@ -235,7 +235,7 @@ create_if_overrides() {
 
     local cfgdir="${cfgfile}.d"
     local dropin="${cfgdir}/eni.conf"
-    local -i metric=$((metric_base+ifid))
+    local -i metric=$((metric_base+10*ifid))
     local -i tableid=0
     if [ $ifid -gt 0 ]; then
         tableid=$((rule_base+ifid))
