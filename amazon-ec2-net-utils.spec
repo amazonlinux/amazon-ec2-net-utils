@@ -6,7 +6,7 @@
 
 Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
-Version:   1.7.0
+Version:   1.7.2
 Release:   1%{?dist}
 License:   MIT and GPLv2
 
@@ -26,7 +26,7 @@ Requires: systemd-units
 %endif # systemd
 Requires: dhclient >= 4.2.5-77.amzn2.1.5
 Provides: ec2-net-utils = %{version}-%{release}
-Obsoletes: ec2-net-utils < 1.6.1
+Obsoletes: ec2-net-utils < 1.7.2
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -89,6 +89,14 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Thu Oct  6 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.7.2-1.amzn2
+- Update to upstream release 1.7.2
+- Fix management of policy rules for IPv6 PD prefixes
+
+* Fri Aug 12 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.7.1-1.amzn2
+- Update to upstream release 1.7.1
+- On interface add, call systemctl directly rather than via SYSTEMD_WANTS
+
 * Tue Jun 21 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.7.0-1.amzn2
 - Update to upstream release 1.7.0
 - Add support for the EC2PROVISIONPFXIPS ifcfg setting
