@@ -8,8 +8,9 @@
 
 export TESTDIR?=${CURDIR}
 OUTPUTDIR=${TESTDIR}/test-output
-TESTS=eth0-basic secondary-basic secondary-more-ips
-SCRIPTS=ec2ifup ec2dhcp-up-ipv4.sh ec2dhcp-up-ipv6.sh ec2dhcp-down-ipv4.sh ec2dhcp-down-ipv6.sh ec2ifdown
+TESTS=eth0-basic secondary-basic secondary-more-ips secondary-delegated-v6 secondary-delegated-v4 \
+	secondary-multiple-delegated-v4 secondary-multiple-delegated-v6 v6-uncompressed-prefixes
+SCRIPTS=ec2ifup ec2dhcp-up-ipv4.sh ec2dhcp-up-ipv6.sh ec2dhcp-down-ipv4.sh ec2dhcp-down-ipv6.sh ec2ifdown ec2-dhclient-enter-hook-up.sh
 CLEANFILES+=${OUTPUTDIR}
 
 define do-tests

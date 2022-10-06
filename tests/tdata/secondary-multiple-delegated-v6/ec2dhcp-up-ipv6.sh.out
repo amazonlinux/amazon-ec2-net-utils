@@ -5,5 +5,7 @@ CALLED ip -6 route add default via fe80::4:3:2:1 dev eth2 table 10002
 CALLED ip -6 rule list
 CALLED ip -6 rule list from fd02:ffff:eeee:1:2:3:2:1 lookup 10002
 CALLED ip -6 rule add from fd02:ffff:eeee:1:2:3:2:1 lookup 10002
+CALLED ip -6 rule list from fd0a:ffff:1::/80 lookup 10002
+CALLED ip -6 rule add from fd0a:ffff:1::/80 lookup 10002
 CALLED ip -6 rule list from fd0a:ffff::/80 lookup 10002
 CALLED ip -6 rule add from fd0a:ffff::/80 lookup 10002

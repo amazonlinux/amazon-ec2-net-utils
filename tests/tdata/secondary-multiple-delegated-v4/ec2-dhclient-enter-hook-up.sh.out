@@ -1,0 +1,1 @@
+CALLED logger --tag ec2net [dhclient] adding default route to main table for eth1 metric 10001
