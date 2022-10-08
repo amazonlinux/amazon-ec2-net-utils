@@ -15,7 +15,7 @@
 
 set -eo pipefail
 
-runtimedir=""
+declare -r runtimedir="/run/systemd/network"
 
 libdir=${LIBDIR_OVERRIDE:-AMAZON_EC2_NET_UTILS_LIBDIR}
 # shellcheck source=../lib/lib.sh
@@ -23,7 +23,6 @@ libdir=${LIBDIR_OVERRIDE:-AMAZON_EC2_NET_UTILS_LIBDIR}
 
 iface="$1"
 [ -n "$iface" ] || { error "Invocation error"; exit 1; }
-[ -n "$runtimedir" ] || { error "runtimedir is unset"; exit 1; }
 
 get_token
 
