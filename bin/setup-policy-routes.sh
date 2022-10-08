@@ -13,9 +13,12 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-set -eo pipefail
+set -eo pipefail -o noclobber -o nounset
 
-declare -r runtimedir="/run/systemd/network"
+declare -r runtimeroot="/run/amazon-ec2-net-utils"
+declare -r lockdir="${runtimeroot}/setup-policy-routes"
+declare -r unitdir="/run/systemd/network"
+declare -r reload_flag="${runtimeroot}/.policy-routes-reload-networkd"
 
 libdir=${LIBDIR_OVERRIDE:-AMAZON_EC2_NET_UTILS_LIBDIR}
 # shellcheck source=../lib/lib.sh
@@ -24,6 +27,8 @@ libdir=${LIBDIR_OVERRIDE:-AMAZON_EC2_NET_UTILS_LIBDIR}
 iface="$1"
 [ -n "$iface" ] || { error "Invocation error"; exit 1; }
 
+mkdir -p "$runtimeroot"
+
 get_token
 
 case "$2" in
@@ -31,9 +36,9 @@ stop)
     register_networkd_reloader
     info "Stopping $iface."
     rm -rf "/run/network/$iface" \
-       "${runtimedir}/70-${iface}.network" \
-       "${runtimedir}/70-${iface}.network.d" || true
-    touch /run/policy-routes-reload-networkd
+       "${unitdir}/70-${iface}.network" \
+       "${unitdir}/70-${iface}.network.d" || true
+    touch "$reload_flag"
     ;;
 start)
     register_networkd_reloader
@@ -52,7 +57,13 @@ start)
     # reports 0 for the device-number prior to propagation...
     changes+=$(setup_interface $iface $ether)
     if [ $changes -gt 0 ]; then
-        touch /run/policy-routes-reload-networkd
+        touch "$reload_flag"
+    fi
+    ;;
+cleanup)
+    if [ -e "${lockdir}/${iface}" ]; then
+        info "WARNING: Cleaning up leaked lock ${lockdir}/${iface}"
+        rm -f "${lockdir}/${iface}"
     fi
     ;;
 *)

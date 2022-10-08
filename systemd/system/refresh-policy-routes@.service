@@ -8,4 +8,5 @@ AmbientCapabilities=CAP_NET_ADMIN
 NoNewPrivileges=yes
 User=root
 ExecStart=/usr/bin/setup-policy-routes %i start
+ExecStartPost=/usr/bin/setup-policy-routes %i cleanup
 SuccessExitStatus=SIGTERM

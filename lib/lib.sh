@@ -13,8 +13,12 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+# These should be set by the calling program
 declare ether
-declare runtimedir
+declare unitdir
+declare lockdir
+declare reload_flag
+
 declare -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::254]/latest")
 declare -r imds_token_path="api/token"
 declare -r syslog_facility="user"
@@ -133,7 +137,7 @@ create_ipv4_aliases() {
     local addresses
     subnet_supports_ipv4 "$iface" || return 0
     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
-    local drop_in_dir="${runtimedir}/70-${iface}.network.d"
+    local drop_in_dir="${unitdir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
     local file="$drop_in_dir/ec2net_alias.conf"
     local work="${file}.new"
@@ -174,7 +178,7 @@ create_rules() {
     local family=$3
     local addrs prefixes
     local local_addr_key subnet_pd_key
-    local drop_in_dir="${runtimedir}/70-${iface}.network.d"
+    local drop_in_dir="${unitdir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
 
     local -i ruleid=$((ifid+rule_base))
@@ -309,7 +313,7 @@ create_interface_config() {
 
     local -i retval=0
 
-    local cfgfile="${runtimedir}/70-${iface}.network"
+    local cfgfile="${unitdir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
         debug "Using existing cfgfile ${cfgfile}"
         echo $retval
@@ -317,7 +321,7 @@ create_interface_config() {
     fi
 
     debug "Linking $cfgfile to $defconfig"
-    mkdir -p "$runtimedir"
+    mkdir -p "$unitdir"
     ln -s "$defconfig" "$cfgfile"
     retval+=$(create_if_overrides "$iface" "$ifid" "$ether" "$cfgfile")
     add_altnames "$iface" "$ether"
@@ -373,10 +377,10 @@ setup_interface() {
 # themselves as such. When exiting, they'll reload networkd only if
 # they're the registered process running.
 maybe_reload_networkd() {
-    rm -f /run/setup-policy-routes/$$
-    if rmdir /run/setup-policy-routes/ 2> /dev/null; then
-        if [ -e /run/policy-routes-reload-networkd ]; then
-            rm -f /run/policy-routes-reload-networkd 2> /dev/null
+    rm -f "${lockdir}/${iface}"
+    if rmdir "$lockdir" 2> /dev/null; then
+        if [ -e "$reload_flag" ]; then
+            rm -f "$reload_flag" 2> /dev/null
             networkctl reload
             info "Reloaded networkd"
         else
@@ -390,9 +394,9 @@ maybe_reload_networkd() {
 register_networkd_reloader() {
     local -i registered=1
     while [ $registered -ne 0 ]; do
-        mkdir -p /run/setup-policy-routes/
+        mkdir -p "$lockdir"
         trap 'debug "Called trap" ; maybe_reload_networkd' EXIT
-        touch /run/setup-policy-routes/$$
+        echo $$ > "${lockdir}/${iface}"
         registered=$?
     done
 }
