@@ -14,7 +14,7 @@
 # permissions and limitations under the License.
 
 declare ether
-declare -r runtimedir="/run/systemd/network"
+declare runtimedir
 declare -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::254]/latest")
 declare -r imds_token_path="api/token"
 declare -r syslog_facility="user"
