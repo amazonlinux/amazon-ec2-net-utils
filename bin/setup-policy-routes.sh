@@ -32,7 +32,7 @@ stop)
     info "Stopping $iface."
     rm -rf "/run/network/$iface" \
        "${runtimedir}/70-${iface}.network" \
-       "${runtimedir}/70-${iface}.network.d"
+       "${runtimedir}/70-${iface}.network.d" || true
     ;;
 start)
     register_networkd_reloader
