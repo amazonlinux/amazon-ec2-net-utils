@@ -311,12 +311,12 @@ create_interface_config() {
 
     local cfgfile="${runtimedir}/70-${iface}.network"
     if [ -e "$cfgfile" ]; then
-        info "Using existing cfgfile ${cfgfile}"
+        debug "Using existing cfgfile ${cfgfile}"
         echo $retval
         return
     fi
 
-    info "Linking $cfgfile to $defconfig"
+    debug "Linking $cfgfile to $defconfig"
     mkdir -p "$runtimedir"
     ln -s "$defconfig" "$cfgfile"
     retval+=$(create_if_overrides "$iface" "$ifid" "$ether" "$cfgfile")
@@ -380,10 +380,10 @@ maybe_reload_networkd() {
             networkctl reload
             info "Reloaded networkd"
         else
-            info "No networkd reload needed"
+            debug "No networkd reload needed"
         fi
     else
-        info "Deferring networkd reload to another process"
+        debug "Deferring networkd reload to another process"
     fi
 }
 
