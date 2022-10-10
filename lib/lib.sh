@@ -38,7 +38,7 @@ get_token() {
     while [ "$(date +%s)" -lt $deadline ]; do
         for ep in "${imds_endpoints[@]}"; do
             set +e
-            imds_token=$(curl --connect-timeout 0.15 -s --fail \
+            imds_token=$(curl --max-time 5 --connect-timeout 0.15 -s --fail \
                               -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${ep}/${imds_token_path})
             set -e
             if [ -n "$imds_token" ]; then
@@ -83,7 +83,7 @@ get_meta() {
     local url="${imds_endpoint}/meta-data/${key}"
     local meta rc
     while [ $attempts -lt $max_tries ]; do
-        meta=$(curl -s -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url")
+        meta=$(curl -s --max-time 5 -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url")
         rc=$?
         if [ $rc -eq 0 ]; then
             echo "$meta"
