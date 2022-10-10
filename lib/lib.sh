@@ -78,6 +78,8 @@ get_meta() {
     declare -i attempts=0
     debug "[get_meta] Querying IMDS for ${key}"
 
+    get_token
+
     local url="${imds_endpoint}/meta-data/${key}"
     local meta rc
     while [ $attempts -lt $max_tries ]; do

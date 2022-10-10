@@ -29,8 +29,6 @@ iface="$1"
 
 mkdir -p "$runtimeroot"
 
-get_token
-
 case "$2" in
 stop)
     register_networkd_reloader
