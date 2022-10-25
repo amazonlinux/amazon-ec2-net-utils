@@ -61,16 +61,18 @@ ec2_rewrite_primary_enter_hook() {
     [ -z "$gateway" ] && { logger --tag ec2net "DHCP lease did not set gateway" ; return 1; }
     [ -z "$route_dest" ] && { logger --tag ec2net "DHCP lease did not set route_dest" ; return 1; }
 
-    if subnet_supports_ipv4 "$new_ip_address"; then
-        cat << EOF > ${route_file}
+    if [ ! -f "${route_file}" ]; then
+        if subnet_supports_ipv4 "$new_ip_address"; then
+            cat << EOF > ${route_file}
 default via ${gateway} dev ${interface} table ${RTABLE}
 ${route_dest} dev ${interface} proto kernel scope link src ${new_ip_address} table ${RTABLE}
 EOF
-        if should_use_mainroutetable "$config_file"; then
-            logger --tag ec2net "[dhclient] adding default route to main table for ${interface} metric ${RTABLE}"
-            cat << EOF >> ${route_file}
+            if should_use_mainroutetable "$config_file"; then
+                logger --tag ec2net "[dhclient] adding default route to main table for ${interface} metric ${RTABLE}"
+                cat << EOF >> ${route_file}
 default via ${gateway} dev ${interface} metric ${RTABLE}
 EOF
+            fi
         fi
     fi
 }

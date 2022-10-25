@@ -1,5 +1,5 @@
 CALLED logger --tag ec2net [plug_interface] eth1 plugged
 CALLED logger --tag ec2net [rewrite_primary] Rewriting configs for eth1
-CALLED rm -f ./test-output/secondary-basic/etc/sysconfig/network-scripts/route6-eth1
+CALLED rm -f ./test-output/secondary-basic/etc/sysconfig/network-scripts/route6-eth1 ./test-output/secondary-basic/etc/sysconfig/network-scripts/route-eth1
 CALLED logger --tag ec2net [activate_primary] Activating eth1
 CALLED ifup eth1

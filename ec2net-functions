@@ -294,12 +294,7 @@ rewrite_primary() {
 	MAINROUTETABLE=${MAINROUTETABLE}
 EOF
 
-  # We would normally write to ${route6_file} here but the
-  # gateway is an fe80:: link local address that we get from the
-  # RA. We only get an RA if the interface has an IPv6 address.
-  # So we wait until dhclient -6 runs rewrite_rules() and add the
-  # ${RTABLE} table there.
-  rm -f ${route6_file}
+  rm -f "${route6_file}" "${route_file}"
 
   # Use broadcast address instead of unicast dhcp server address.
   # Works around an issue with two interfaces on the same subnet.
