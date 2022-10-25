@@ -6,7 +6,7 @@
 
 Name:      amazon-ec2-net-utils
 Summary:   A set of network tools for managing ENIs
-Version:   1.7.2
+Version:   1.7.3
 Release:   1%{?dist}
 License:   MIT and GPLv2
 
@@ -26,7 +26,7 @@ Requires: systemd-units
 %endif # systemd
 Requires: dhclient >= 4.2.5-77.amzn2.1.5
 Provides: ec2-net-utils = %{version}-%{release}
-Obsoletes: ec2-net-utils < 1.7.2
+Obsoletes: ec2-net-utils < 1.7.3
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 %description
@@ -89,6 +89,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_mandir}/man8/ec2ifscan.8.gz
 
 %changelog
+* Tue Oct 25 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.7.3-1.amzn2
+- Do not delete route-ethX files on ifup
+
 * Thu Oct  6 2022 Noah Meyerhans <nmeyerha@amazon.com> 1.7.2-1.amzn2
 - Update to upstream release 1.7.2
 - Fix management of policy rules for IPv6 PD prefixes
