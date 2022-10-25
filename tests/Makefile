@@ -32,6 +32,7 @@ define compare-outputs
   $(foreach t,${SCRIPTS},
     $(call compare-output,${1},${t})
   )
+  rm -rf "${OUTPUTDIR}/${1}"
 endef
 
 define compare-output
