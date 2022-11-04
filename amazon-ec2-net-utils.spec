@@ -1,6 +1,6 @@
 Name:    amazon-ec2-net-utils
 Version: 2.3.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: utilities for managing network interfaces in Amazon EC2
 
 License: Apache 2.0
@@ -32,6 +32,7 @@ make install DESTDIR=%{buildroot} PREFIX=/usr
 
 /usr/lib/udev/rules.d/99-vpc-policy-routes.rules
 %{_bindir}/setup-policy-routes
+%dir %{_datarootdir}/amazon-ec2-net-utils
 %{_datarootdir}/amazon-ec2-net-utils/lib.sh
 
 %post
