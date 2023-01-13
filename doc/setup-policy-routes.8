@@ -1,0 +1,110 @@
+\"  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+\"
+\"  Licensed under the Apache License, Version 2.0 (the "License"). You may
+\"  not use this file except in compliance with the License. A copy of the
+\"  License is located at
+\"
+\"       http://aws.amazon.com/apache2.0/
+\"
+\"  or in the "license" file accompanying this file. This file is distributed
+\"  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+\"  express or implied. See the License for the specific language governing
+\"  permissions and limitations under the License.
+\" SPDX-License-Identifier: Apache-2.0
+.TH SETUP-POLICY-ROUTES 8 23-Dec-2022 amazon-ec2-net-utils
+.SH NAME
+setup-policy-routes \- configure systemd-networkd within an Amazon VPC network
+.SH SYNOPSIS
+.B setup-policy-routes
+.RI "INTERFACE"
+.RI "stop|start|cleanup"
+.SH DESCRIPTION
+.B setup-policy-routes
+installs systemd-networkd configuration to the /run/systemd/network
+directory to configure the given network interface for optimal use in
+an Amazon Virtual Private Cloud (VPC) network environment.
+
+The installed systemd-networkd configuration:
+
+.IP
+
+\(bu Sets up DHCPv4 and DHCPv6 clients
+
+\(bu Assigns or unassigns secondary IPv4 addresses as IP aliases as
+appropriate
+
+\(bu Installs per-interface route tables and policy routing rules to
+ensure that egress traffic with a given source address is routed via
+the ENI with which that address (or its corresponding prefix) is
+associated.  This ensures compliance with the VPC anti-spoofing
+protections.
+
+\(bu Installs interface aliases corresponding to the ENI ID and
+attachment ID
+
+.PP
+Installed configuration can be overridden as needed by placing a file
+with the same name as the generated file in /etc/systemd/network.  See
+.BR systemd.network(5)
+for more details.
+
+.PP
+.B setup-policy-routes
+is not normally executed by hand, but is instead normally invoked by
+udev rules either on boot or by a systemd timer.
+
+.SH OPTIONS
+.B setup-policy-routes
+takes a network interface name as the first parameter and one of
+start, stop, or cleanup as the second parameter:
+.IP
+\(bu
+.B start
+indicates that the given interface should be configured
+
+\(bu
+.B stop
+indicates that the given interface should be deconfigured and the
+installed configuration should be cleaned up
+
+\(bu
+.B cleanup
+performs internal housekeeping
+
+.SH ENVIRONMENT
+.PP
+.B setup-policy-routes
+recognizes the following environment variables
+
+.IP
+.B EC2_IF_INITIAL_SETUP
+This variable should be set when performing initial configuration of
+an interface, as opposed to refreshing the configuration of an
+interface that is already active.  It enables additional retry logic
+for some internal operations that rely on the Amazon EC2 Instance
+Metadata Service (IMDS) in order to ensure that the interface
+setup accounts for any configuration data that may still be in flight
+while the interface is being configured on the instance.
+
+.SH FILES
+.PP
+.IR /run/systemd/network/*.network
+.br
+.IR /run/systemd/network/*.network.d/eni.conf
+.br
+.IR /usr/lib/systemd/network/80-ec2.network
+.br
+.IR /usr/lib/udev/rules.d/99-vpc-policy-routes.rules
+
+.SH SEE ALSO
+.BR systemd-networkd (8),
+.BR networkctl (1),
+.BR systemd.network(5),
+.BR systemd.timer(5),
+.UR https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html
+The Amazon Virtual Private Cloud User Guide
+.UE
+.UR https://github.com/amazonlinux/amazon-ec2-net-utils
+The amazon-ec2-net-utils GitHub repository.
+.UE
+.br
