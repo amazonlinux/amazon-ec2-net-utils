@@ -1,9 +1,9 @@
 # amazon-ec2-net-utils #
 
-## Rationale ##
+## Background ##
 
-The existing amazon-ec2-net-utils package provides functionality
-needed to configure a Linux instance for optimal performance in a VPC
+The amazon-ec2-net-utils package provides functionality needed to
+configure a Linux instance for optimal performance in a VPC
 environment. It handles:
 
 * Per-interface policy routing rules to accommodate VPC source/dest
@@ -12,11 +12,15 @@ environment. It handles:
 * Configuration of ENIs upon hotplug
 * Routing configuration for delegated prefixes
 
-The existing amazon-ec2-net-utils package has a long history and is
-tightly coupled to dhclient and initscripts network
-configuration. Both of these components are deprecated upstream and
-will not make up the primary network configuration framework in future
-releases of Amazon Linux. Thus a new implementation is required.
+The version 1.x branch of the amazon-ec2-net-utils package was used in
+Amazon Linux 2 and earlier releases.  It has a long history and is
+tightly coupled to ISC dhclient and initscripts network
+configuration. Both of these components are deprecated and will not
+make up the primary network configuration framework in future releases
+of Amazon Linux or other distributions. The 2.x branch (released from
+the `main` branch in git) represents a complete rewrite targeting a
+more modern network management framework.  The rest of this document
+describes the 2.x branch.
 
 ## Implementation ##
 
@@ -38,12 +42,12 @@ amazon-ec2-net-utils package should be able to integrate with any
 systemd-based distribution. This allows us to provide customers with a
 common baseline behavior regardless of whether they choose Amazon
 Linux or a third-party distribution. Testing has been performed on
-Debian, Fedora, and AL2022.
+Debian, Fedora, and Amazon Linux 2023.
 
 ## Usage ##
 
 amazon-ec2-net-utils is expected to be pre-installed on Amazon Linux
-2022 and future releases. In the common case, customers should not
+2023 and future releases. In the common case, customers should not
 need to be aware of its operation. Configuration of network interfaces
 should occur following the principle of least astonishment. That is,
 traffic should be routed via the ENI associated with the source
@@ -140,16 +144,21 @@ that booted with amazon-ec2-net-utils.
     Current DNS Server: 10.0.0.2
           DNS Servers: 10.0.0.2
 
-## TODO ##
+## Getting help ##
 
-There are a few remaining small tasks left to complete, and one larger consideration:
+If you're using amazon-ec2-net-utils as packaged by a Linux
+distribution, please consider using your distribution's support
+channels first.  Your distribution may have modified the behavior of
+the package to facilitate better integration, and may have more
+specific guidance for you.
 
-* The primary body of executable code is currently written in
-  bash. While it is intended to be usable as-is, we might consider
-  rewriting some or all of it in something else. Preferred options
-  would be Rust, Go, or C, probably in that order.  Testing
+Alternatively, if you don't believe your issue is distribution
+specific, please feel free to open an issue on GitHub.
 
-* The systemd .network file templates are currently embedded directly
-  in the shell script code.  Ideally they get moved out of the code to
-  facilitiate easier examination and modification, potentially as
-  configuration files.
+## Contributing ##
+
+We are happy to review proposed changes.  If you're considering
+introducing any major functionality or behavior changes, you may wish
+to consider opening an issue where we can discuss the details before
+you proceed with implementation.  Please refer to
+[CONTRIBUTING.md](CONTRIBUTING.md) for additional expectations.

@@ -24,7 +24,7 @@ reported the issue. Please try to include as much information as you can. Detail
 Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
 
 1. You are working against the latest source on the correct branch.
-   Amazon Linux 2022 releases are made from the *main* branch, while
+   Amazon Linux 2023 releases are made from the *main* branch, while
    Amazon Linux 2 releases are made from the *1.x* branch.  Your pull
    requests should target the branch appropriate to the distribution
    you're targeting with your improvement.  If you are targeting a
