@@ -394,11 +394,12 @@ maybe_reload_networkd() {
 }
 
 register_networkd_reloader() {
-    local -i registered=1
-    while [ $registered -ne 0 ]; do
+    local -i registered=0
+    while [ $registered -eq 0 ]; do
         mkdir -p "$lockdir"
         trap 'debug "Called trap" ; maybe_reload_networkd' EXIT
-        echo $$ > "${lockdir}/${iface}"
-        registered=$?
+        if echo $$ > "${lockdir}/${iface}"; then
+            registered=1
+        fi
     done
 }
