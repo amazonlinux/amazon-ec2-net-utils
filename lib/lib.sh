@@ -393,13 +393,40 @@ maybe_reload_networkd() {
     fi
 }
 
+
 register_networkd_reloader() {
-    local -i registered=0
-    while [ $registered -eq 0 ]; do
+    local -i registered=1 cnt=0
+    local -i max=10000
+    local -r lockfile="${lockdir}/${iface}"
+    local old_opts=$-
+
+    # Disable -o errexit in the following block so we can capture
+    # nonzero exit codes from a redirect without considering them
+    # fatal errors
+    set +e
+    while [ $cnt -lt $max ]; do
+        cnt+=1
         mkdir -p "$lockdir"
         trap 'debug "Called trap" ; maybe_reload_networkd' EXIT
-        if echo $$ > "${lockdir}/${iface}"; then
-            registered=1
+        # If the redirect fails, most likely because the target file
+        # already exists and -o noclobber is in effect, $? will be set
+        # nonzero.  If it succeeds, it is set to 0
+        echo $$ > "${lockfile}"
+        registered=$?
+        [ $registered -eq 0 ] && break
+        sleep 0.1
+        if (( $cnt % 100 == 0 )); then
+            info "Unable to lock ${iface} after ${cnt} tries."
         fi
     done
+    # re-enable -o errexit if it had originally been set
+    [[ $old_opts = *e* ]] && set -e
+
+    # If registered is still nonzero when we get here, we have failed
+    # to create the lock.  Log this and exit.
+    if [ $registered -ne 0 ]; then
+        local msg="Unable to lock configuration for ${iface}."
+        error "$(printf "%s Check pid %d", "$msg", "$(cat "${lockfile}")")"
+        exit 1
+    fi
 }
