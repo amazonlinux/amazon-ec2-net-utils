@@ -1,11 +1,13 @@
 Name:    amazon-ec2-net-utils
-Version: 2.3.0
+%define  base_version 2.3.0
+%define  source_version %{base_version}%{?_source_version_suffix}
+Version: %{base_version}%{?_rpm_version_suffix}
 Release: 1%{?dist}
 Summary: utilities for managing network interfaces in Amazon EC2
 
 License: Apache 2.0
 URL:     https://github.com/aws/amazon-ec2-net-utils/
-Source0: amazon-ec2-net-utils-%{version}.tar.gz
+Source0: amazon-ec2-net-utils-%{source_version}.tar.gz
 
 BuildArch: noarch
 
@@ -19,7 +21,7 @@ to manage network configuration in the Amazon EC2 cloud environment
 
 %prep
 
-%autosetup -n %{name}-%{version}
+%autosetup -n %{name}-%{source_version}
 
 %install
 make install DESTDIR=%{buildroot} PREFIX=/usr
