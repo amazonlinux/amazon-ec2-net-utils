@@ -35,12 +35,13 @@ get_token() {
     # invocations we avoid retrying
     local deadline
     deadline=$(date -d "now+30 seconds" +%s)
+    local old_opts=$-
     while [ "$(date +%s)" -lt $deadline ]; do
         for ep in "${imds_endpoints[@]}"; do
             set +e
             imds_token=$(curl --max-time 5 --connect-timeout 0.15 -s --fail \
                               -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${ep}/${imds_token_path})
-            set -e
+            [[ $old_opts = *e* ]] && set -e
             if [ -n "$imds_token" ]; then
                 debug "Got IMDSv2 token from ${ep}"
                 imds_endpoint=$ep
