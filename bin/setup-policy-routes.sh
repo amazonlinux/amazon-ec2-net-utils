@@ -50,9 +50,6 @@ start)
     ether=$(cat /sys/class/net/${iface}/address)
 
     declare -i changes=0
-    # Ideally we'd use the device-number interface property from IMDS,
-    # but interface details take some time to propagate, and IMDS
-    # reports 0 for the device-number prior to propagation...
     changes+=$(setup_interface $iface $ether)
     if [ $changes -gt 0 ]; then
         touch "$reload_flag"
