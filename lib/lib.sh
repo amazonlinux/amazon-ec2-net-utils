@@ -158,7 +158,7 @@ EOF
 subnet_supports_ipv4() {
     local iface=$1
     if [ -z "$iface" ]; then
-        err "${FUNCNAME[0]} called without an interface"
+        error "${FUNCNAME[0]} called without an interface"
         return 1
     fi
     ! ip -4 addr show dev "$iface" scope global | \
@@ -168,7 +168,7 @@ subnet_supports_ipv4() {
 subnet_supports_ipv6() {
     local iface=$1
     if [ -z "$iface" ]; then
-        err "${FUNCNAME[0]} called without an interface"
+        error "${FUNCNAME[0]} called without an interface"
         return 1
     fi
     ip -6 addr show dev "$iface" scope global | grep -q inet6
@@ -330,6 +330,42 @@ create_interface_config() {
     echo $retval
 }
 
+# device-number, which represents the DeviceIndex field in an EC2
+# NetworkInterfaceAttachment object, is not guaranteed to have
+# propagated to IMDS by the time a hot-plugged interface is visible to
+# the instance.  Further complicating things, IMDS returns 0 for the
+# device-number before propagation is complete, which is a valid value
+# and represents the instance's primary interface.  We cope with this
+# by ensuring that the only interface for which we return 0 as the
+# device-number is the one whose MAC address matches the instance's
+# top-level "mac" field, which is static and guaranteed to be
+# available as soon as the instance launches.
+_get_device_number() {
+    local iface ether default_mac
+    iface="$1"
+    ether="$2"
+
+    default_mac=$(get_imds mac)
+
+    if [ "$ether" = "$default_mac" ]; then
+        echo 0
+        return 0
+    fi
+
+    local -i maxtries=60 ntries=0
+    for (( ntries = 0; ntries < maxtries; ntries++ )); do
+        device_number=$(get_iface_imds "$ether" device-number)
+        if [ $device_number -ne 0 ]; then
+            echo "$device_number"
+            return 0
+        else
+            sleep 0.1
+        fi
+    done
+    error "Unable to identify device-number for $iface after $ntries attempts"
+    return 1
+}
+
 # Interfaces get configured with addresses and routes from
 # DHCP. Routes are inserted in the main table with metrics based on
 # their physical location (slot ID) to ensure deterministic route
@@ -339,12 +375,12 @@ create_interface_config() {
 # addresses from delegated prefixes) will be routing according to an
 # interface-specific routing table.
 setup_interface() {
-    local iface ether default_mac
+    local iface ether
     local -i device_number
     iface=$1
     ether=$2
-    default_mac=$(get_imds mac)
-    device_number=$(get_iface_imds "$ether" device-number)
+
+    device_number=$(_get_device_number "$iface" "$ether")
 
     # Newly provisioned resources (new ENI attachments) take some
     # time to be fully reflected in IMDS. In that case, we poll
@@ -359,8 +395,8 @@ setup_interface() {
 
         changes+=$(create_interface_config "$iface" "$device_number" "$ether")
         for family in 4 6; do
-            if [ "$device_number" -eq 0 ] && [ "$ether" = "$default_mac" ]; then
-                debug "Skipping ipv$family rules for default ENI $iface $ether $default_mac $device_number"
+            if [ "$device_number" -eq 0 ]; then
+                debug "Skipping ipv$family rules for primary ENI $iface"
             else
                 changes+=$(create_rules "$iface" "$device_number" $family)
             fi
