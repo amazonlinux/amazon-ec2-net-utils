@@ -24,6 +24,11 @@ declare -r imds_token_path="api/token"
 declare -r syslog_facility="user"
 declare -r syslog_tag="ec2net"
 declare -i -r rule_base=10000
+
+# Systemd installs routes with a metric of 1024 by default.  We
+# override to a lower metric to ensure that our fully configured
+# interfaces are preferred over those in the process of being
+# configured.
 declare -i -r metric_base=512
 declare imds_endpoint imds_token
 
@@ -175,6 +180,23 @@ subnet_supports_ipv6() {
     ip -6 addr show dev "$iface" scope global | grep -q inet6
 }
 
+subnet_prefixroutes() {
+    local ether=$1
+    local family=${2:-ipv4}
+    if [ -z "$ether" ]; then
+        err "${FUNCNAME[0]} called without an MAC address"
+        return 1
+    fi
+    case "$family" in
+        ipv4)
+            get_iface_imds "$ether" "subnet-${family}-cidr-block"
+            ;;
+        ipv6)
+            get_iface_imds "$ether" "subnet-${family}-cidr-blocks"
+            ;;
+    esac
+}
+
 create_rules() {
     local iface=$1
     local ifid=$2
@@ -243,10 +265,7 @@ create_if_overrides() {
     local cfgdir="${cfgfile}.d"
     local dropin="${cfgdir}/eni.conf"
     local -i metric=$((metric_base+10*ifid))
-    local -i tableid=0
-    if [ $ifid -gt 0 ]; then
-        tableid=$((rule_base+ifid))
-    fi
+    local -i tableid=$((rule_base+ifid))
 
     mkdir -p "$cfgdir"
     cat <<EOF > "${dropin}.tmp"
@@ -255,31 +274,50 @@ create_if_overrides() {
 MACAddress=${ether}
 [Network]
 DHCP=yes
+
 [DHCPv4]
 RouteMetric=${metric}
-[DHCPv6]
+UseRoutes=true
+UseGateway=true
+
+[IPv6AcceptRA]
 RouteMetric=${metric}
+UseGateway=true
+
 EOF
 
-    if [ "$tableid" -gt 0 ]; then
-        cat <<EOF >> "${dropin}.tmp"
+    cat <<EOF >> "${dropin}.tmp"
 [Route]
 Table=${tableid}
 Gateway=_ipv6ra
-[DHCPv4]
-RouteTable=${tableid}
-[IPv6AcceptRA]
-RouteTable=${tableid}
+
 EOF
-	if subnet_supports_ipv4 "$iface"; then
-            # if we're not in a v6-only network, add IPv4 routes to the private table
-            cat <<EOF >> "${dropin}.tmp"
+    for dest in $(subnet_prefixroutes "$ether" ipv6); do
+        cat <<EOF >> "${dropin}.tmp"
+[Route]
+Table=${tableid}
+Destination=${dest}
+
+EOF
+    done
+
+    if subnet_supports_ipv4 "$iface"; then
+        # if not in a v6-only network, add IPv4 routes to the private table
+        cat <<EOF >> "${dropin}.tmp"
 [Route]
 Gateway=_dhcp4
 Table=${tableid}
 EOF
-	fi
+        local dest
+        for dest in $(subnet_prefixroutes "$ether" ipv4); do
+            cat <<EOF >> "${dropin}.tmp"
+[Route]
+Table=${tableid}
+Destination=${dest}
+EOF
+        done
     fi
+
 
     mv "${dropin}.tmp" "$dropin"
     echo 1
@@ -396,11 +434,7 @@ setup_interface() {
 
         changes+=$(create_interface_config "$iface" "$device_number" "$ether")
         for family in 4 6; do
-            if [ "$device_number" -eq 0 ]; then
-                debug "Skipping ipv$family rules for primary ENI $iface"
-            else
-                changes+=$(create_rules "$iface" "$device_number" $family)
-            fi
+            changes+=$(create_rules "$iface" "$device_number" $family)
         done
         changes+=$(create_ipv4_aliases $iface $ether)
 

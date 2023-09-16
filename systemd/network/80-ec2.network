@@ -21,10 +21,3 @@ UseHostname=no
 UseDNS=yes
 UseNTP=yes
 WithoutRA=solicit
-
-[Route]
-Gateway=_ipv6ra
-
-[IPv6AcceptRA]
-UseDomains=yes
-
