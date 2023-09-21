@@ -1,8 +1,8 @@
 Name:    amazon-ec2-net-utils
-%define  base_version 2.3.0
+%define  base_version 2.4.0
 %define  source_version %{base_version}%{?_source_version_suffix}
 Version: %{base_version}%{?_rpm_version_suffix}
-Release: 2%{?dist}
+Release: 1%{?dist}
 Summary: utilities for managing network interfaces in Amazon EC2
 
 License: Apache 2.0

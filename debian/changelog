@@ -1,3 +1,9 @@
+amazon-ec2-net-utils (2.4.0-1~1) unstable; urgency=medium
+
+  * New upstream release 2.4.0
+
+ -- Noah Meyerhans <nmeyerha@amazon.com>  Thu, 21 Sep 2023 15:10:07 -0700
+
 amazon-ec2-net-utils (2.3.0-1~1) unstable; urgency=medium
 
   * New upstream release
