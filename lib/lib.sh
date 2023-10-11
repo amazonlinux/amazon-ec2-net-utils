@@ -434,7 +434,20 @@ setup_interface() {
 
         changes+=$(create_interface_config "$iface" "$device_number" "$ether")
         for family in 4 6; do
-            changes+=$(create_rules "$iface" "$device_number" $family)
+            if [ $device_number -ne 0 ]; then
+                # We only create rules for secondary interfaces so
+                # external tools that modify the main route table can
+                # still communicate with the host's primary IPs.  For
+                # example, considering a host with address 10.1.2.3 on
+                # ens5 (device-number-0) and a container communicating
+                # on a docker0 bridge interface, the expectation is
+                # that the container can communicate with 10.1.2.3 in
+                # both directions.  If we install policy rules,
+                # they'll redirect the return traffic out ens5 rather
+                # than docker0, effectively blackholing it.
+                # https://github.com/amazonlinux/amazon-ec2-net-utils/issues/97
+                changes+=$(create_rules "$iface" "$device_number" $family)
+            fi
         done
         changes+=$(create_ipv4_aliases $iface $ether)
 
