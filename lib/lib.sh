@@ -63,7 +63,7 @@ get_token() {
 log() {
     local priority
     priority=$1 ; shift
-    logger --priority "${syslog_facility}.${priority}" --tag "$syslog_tag" "$@"
+    logger --id=$$ --priority "${syslog_facility}.${priority}" --tag "$syslog_tag" "$@"
 }
 
 debug() {
