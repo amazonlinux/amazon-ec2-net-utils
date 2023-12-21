@@ -48,6 +48,7 @@ scratch-rpm: rpm_version_suffix=$(shell git describe --dirty --tags | sed "s,^v$
 scratch-rpm: scratch-sources
 scratch-rpm: ## build an RPM based on the current working copy
 	rpmbuild -D "_sourcedir $(CURDIR)/.." -D "_source_version_suffix ${source_version_suffix}" \
+	         -D "_rpmdir $(CURDIR)/RPMS" \
 	         -D "_rpm_version_suffix ${rpm_version_suffix}" -bb amazon-ec2-net-utils.spec
 
 .PHONY: scratch-sources
