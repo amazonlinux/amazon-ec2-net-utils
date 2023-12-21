@@ -81,7 +81,7 @@ error() {
 get_meta() {
     local key=$1
     local max_tries=${2:-10}
-    declare -i attempts=0
+    local -i attempts=0 ms_per_backoff=100 backoff=0
     debug "[get_meta] Querying IMDS for ${key}"
 
     get_token
@@ -96,6 +96,8 @@ get_meta() {
             return 0
         fi
         attempts+=1
+        backoff=$((attempts*ms_per_backoff))
+        sleep $((backoff/1000)).$((backoff%1000))
     done
     return 1
 }
