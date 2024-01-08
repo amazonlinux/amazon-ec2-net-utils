@@ -40,13 +40,18 @@ stop)
     ;;
 start)
     register_networkd_reloader
-    while [ ! -e "/sys/class/net/${iface}" ]; do
-        debug  "Waiting for sysfs node to exist"
-        sleep 0.1
-    done
-    info "Starting configuration for $iface"
-    debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
-    /lib/systemd/systemd-networkd-wait-online -i "$iface"
+    if [ -v EC2_IF_INITIAL_SETUP ]; then
+        while [ ! -e "/sys/class/net/${iface}" ]; do
+            debug  "Waiting for sysfs node to exist"
+            sleep 0.1
+        done
+        info "Starting configuration for $iface"
+        debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
+        /lib/systemd/systemd-networkd-wait-online -i "$iface"
+    else
+        [ -e "/sys/class/net/${iface}" ] || exit 0
+        info "Starting configuration refresh for $iface"
+    fi
     ether=$(cat /sys/class/net/${iface}/address)
 
     declare -i changes=0
