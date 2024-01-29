@@ -51,6 +51,13 @@ scratch-rpm: ## build an RPM based on the current working copy
 	         -D "_rpmdir $(CURDIR)/RPMS" \
 	         -D "_rpm_version_suffix ${rpm_version_suffix}" -bb amazon-ec2-net-utils.spec
 
+.PHONY: scratch-deb
+scratch-deb: v=$(shell dpkg-parsechangelog -S Version -l debian/changelog | sed -E 's,^\S:,,; s,-\S+,,')
+scratch-deb: scratch_v=$(shell git describe --dirty --tags | sed "s,^v${version}-,,")
+scratch-deb: ## Build a pre-release .deb based on the current working copy
+	DEBEMAIL=nobody@localhost DEBFULLNAME="test runner" dch -v "${v}.${scratch_v}-1~1" -b -D unstable "scratch build"
+	dpkg-buildpackage -uc -us --build=binary
+
 .PHONY: scratch-sources
 scratch-sources: version=$(shell git describe --dirty --tags | sed "s,^v,,")
 scratch-sources: ## generate a tarball based on the current working copy
