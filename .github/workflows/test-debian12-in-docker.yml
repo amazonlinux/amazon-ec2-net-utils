@@ -1,0 +1,20 @@
+name: Debian 12 package build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the test container image (Debian 12)
+      run: docker build . --file .github/Dockerfile.debian12-test --tag amazon-ec2-net-utils-tests:debian12
+    - name: Run a containerized scratch build (Debian 12)
+      run: docker run -v $(readlink -f $PWD):/src -w /src --entrypoint ".github/container-tests-debian12.sh" amazon-ec2-net-utils-tests:debian12
