@@ -1,0 +1,20 @@
+name: Debian sid package build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the test container image (Debian sid/unstable)
+      run: docker build . --file .github/Dockerfile.debian-sid-test --tag amazon-ec2-net-utils-tests:debian-sid
+    - name: Run a containerized scratch build (Debian sid/unstable)
+      run: docker run -v $(readlink -f $PWD):/src -w /src --entrypoint ".github/container-tests-debian12.sh" amazon-ec2-net-utils-tests:debian-sid
