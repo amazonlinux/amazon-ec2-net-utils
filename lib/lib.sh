@@ -540,6 +540,7 @@ register_networkd_reloader() {
         # already exists and -o noclobber is in effect, $? will be set
         # nonzero.  If it succeeds, it is set to 0
         echo $$ > "${lockfile}"
+	# shellcheck disable=SC2320
         registered=$?
         [ $registered -eq 0 ] && break
         sleep 0.1
