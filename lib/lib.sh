@@ -374,7 +374,8 @@ create_interface_config() {
     local -i retval=0
 
     local cfgfile="${unitdir}/70-${iface}.network"
-    if [ -e "$cfgfile" ]; then
+    if [ -e "$cfgfile" ] &&
+           [ ! -v EC2_IF_INITIAL_SETUP ]; then
         debug "Using existing cfgfile ${cfgfile}"
         echo $retval
         return
@@ -382,7 +383,7 @@ create_interface_config() {
 
     debug "Linking $cfgfile to $defconfig"
     mkdir -p "$unitdir"
-    ln -s "$defconfig" "$cfgfile"
+    ln -sf "$defconfig" "$cfgfile"
     retval+=$(create_if_overrides "$iface" "$device_number" "$network_card" "$ether" "$cfgfile")
     add_altnames "$iface" "$ether" "$device_number" "$network_card"
     echo $retval

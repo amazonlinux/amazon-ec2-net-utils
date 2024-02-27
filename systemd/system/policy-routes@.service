@@ -10,10 +10,6 @@ PrivateTmp=yes
 AmbientCapabilities=CAP_NET_ADMIN
 NoNewPrivileges=yes
 User=root
-Environment="EC2_IF_INITIAL_SETUP=true"
 ExecStart=/usr/bin/setup-policy-routes %i start
-ExecStartPost=/usr/bin/setup-policy-routes %i cleanup
-ExecStop=/usr/bin/setup-policy-routes %i stop
-ExecStopPost=/usr/bin/setup-policy-routes %i cleanup
 Restart=on-failure
 RestartSec=1
