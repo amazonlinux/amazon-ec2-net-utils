@@ -1,4 +1,2 @@
-SUBSYSTEM=="net", ACTION=="remove", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN+="/usr/bin/systemctl stop --no-block policy-routes@$name.service"
-SUBSYSTEM=="net", ACTION=="remove", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN+="/usr/bin/systemctl disable --now refresh-policy-routes@$name.timer refresh-policy-routes@$name.service policy-routes@$name.service"
-
+SUBSYSTEM=="net", ACTION=="remove", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN+="/usr/bin/systemctl disable --now refresh-policy-routes@$name.timer policy-routes@$name.service"
 SUBSYSTEM=="net", ACTION=="add", ENV{ID_NET_DRIVER}=="vif|ena|ixgbevf", RUN+="/usr/bin/systemctl enable --now --no-block policy-routes@$name.service refresh-policy-routes@$name.timer"

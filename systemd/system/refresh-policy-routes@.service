@@ -7,6 +7,5 @@ PrivateTmp=yes
 AmbientCapabilities=CAP_NET_ADMIN
 NoNewPrivileges=yes
 User=root
-ExecStart=/usr/bin/setup-policy-routes %i start
-ExecStartPost=/usr/bin/setup-policy-routes %i cleanup
+ExecStart=/usr/bin/setup-policy-routes %i refresh
 SuccessExitStatus=SIGTERM

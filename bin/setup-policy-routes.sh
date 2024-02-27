@@ -15,6 +15,7 @@
 
 set -eo pipefail -o noclobber -o nounset
 
+export unitdir lockdir runtimeroot reload_flag
 declare -r runtimeroot="/run/amazon-ec2-net-utils"
 declare -r lockdir="${runtimeroot}/setup-policy-routes"
 declare -r unitdir="/run/systemd/network"
@@ -29,29 +30,7 @@ iface="$1"
 
 mkdir -p "$runtimeroot"
 
-case "$2" in
-stop)
-    register_networkd_reloader
-    info "Stopping $iface."
-    rm -rf "/run/network/$iface" \
-       "${unitdir}/70-${iface}.network" \
-       "${unitdir}/70-${iface}.network.d" || true
-    touch "$reload_flag"
-    ;;
-start)
-    register_networkd_reloader
-    if [ -v EC2_IF_INITIAL_SETUP ]; then
-        while [ ! -e "/sys/class/net/${iface}" ]; do
-            debug  "Waiting for sysfs node to exist"
-            sleep 0.1
-        done
-        info "Starting configuration for $iface"
-        debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
-        /lib/systemd/systemd-networkd-wait-online -i "$iface"
-    else
-        [ -e "/sys/class/net/${iface}" ] || exit 0
-        info "Starting configuration refresh for $iface"
-    fi
+do_setup() {
     ether=$(cat /sys/class/net/${iface}/address)
 
     declare -i changes=0
@@ -59,13 +38,37 @@ start)
     if [ $changes -gt 0 ]; then
         touch "$reload_flag"
     fi
+}
+
+case "$2" in
+refresh)
+    [ -e "/sys/class/net/${iface}" ] || exit 0
+    info "Starting configuration refresh for $iface"
+    do_setup
     ;;
-cleanup)
-    if [ -e "${lockdir}/${iface}" ]; then
-        info "WARNING: Cleaning up leaked lock ${lockdir}/${iface}"
-        rm -f "${lockdir}/${iface}"
-    fi
+start)
+    register_networkd_reloader
+    while [ ! -e "/sys/class/net/${iface}" ]; do
+        debug  "Waiting for sysfs node to exist"
+        sleep 0.1
+    done
+    info "Starting configuration for $iface"
+    debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
+    /lib/systemd/systemd-networkd-wait-online -i "$iface"
+    export EC2_IF_INITIAL_SETUP=1
+    do_setup
     ;;
+remove)
+    register_networkd_reloader
+    info "Removing configuration for $iface."
+    rm -rf "/run/network/$iface" \
+       "${unitdir}/70-${iface}.network" \
+       "${unitdir}/70-${iface}.network.d" || true
+    touch "$reload_flag"
+    ;;
+stop|cleanup)
+    # this is a no-op, only supported for compatibility
+    :;;
 *)
     echo "USAGE: $0: start|stop"
     echo "  This tool is normally invoked via udev rules."
