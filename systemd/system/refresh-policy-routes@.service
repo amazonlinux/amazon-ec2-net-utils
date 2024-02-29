@@ -9,3 +9,4 @@ NoNewPrivileges=yes
 User=root
 ExecStart=/usr/bin/setup-policy-routes %i refresh
 SuccessExitStatus=SIGTERM
+KillMode=process
