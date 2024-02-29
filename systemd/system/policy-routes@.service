@@ -2,6 +2,10 @@
 Description=Set up policy routes for %I
 StartLimitIntervalSec=10
 StartLimitBurst=5
+Wants=refresh-policy-routes@%i.timer
+
+[Install]
+Also=refresh-policy-routes@%i.timer
 
 [Service]
 Type=oneshot
