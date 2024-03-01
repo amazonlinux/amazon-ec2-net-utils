@@ -382,6 +382,17 @@ create_interface_config() {
     echo $retval
 }
 
+# The primary interface is defined as the interface whose MAC address
+# is in the top-level `mac` key.  It will always have device-number 0
+# and network-card 0.  It gets unique treatment in a few areas.
+_is_primary_interface() {
+    local ether default_mac
+    ether="$1"
+
+    default_mac=$(get_imds mac)
+    [ "$ether" = "$default_mac" ]
+}
+
 # device-number, which represents the DeviceIndex field in an EC2
 # NetworkInterfaceAttachment object, is not guaranteed to have
 # propagated to IMDS by the time a hot-plugged interface is visible to
@@ -393,21 +404,23 @@ create_interface_config() {
 # top-level "mac" field, which is static and guaranteed to be
 # available as soon as the instance launches.
 _get_device_number() {
-    local iface ether default_mac
+    local iface ether network_card_index
     iface="$1"
     ether="$2"
+    network_card_index=${3:-0}
 
-    default_mac=$(get_imds mac)
-
-    if [ "$ether" = "$default_mac" ]; then
-        echo 0
-        return 0
+    if _is_primary_interface "$ether"; then
+        echo 0 ; return 0
     fi
 
     local -i maxtries=60 ntries=0
     for (( ntries = 0; ntries < maxtries; ntries++ )); do
         device_number=$(get_iface_imds "$ether" device-number)
-        if [ $device_number -ne 0 ]; then
+        # if either the device number or the card index are nonzero,
+        # then we treat the value returned as valid.  Zero values for
+        # both is only valid for the primary interface, which we've
+        # already concluded is not this one.
+        if [ $device_number -ne 0 ] || [ $network_card_index -ne 0 ]; then
             echo "$device_number"
             return 0
         else
@@ -426,6 +439,10 @@ _get_network_card() {
     local iface ether network_card
     iface="$1"
     ether="$2"
+
+    if _is_primary_interface "$ether"; then
+        echo 0 ; return 0
+    fi
     network_card=$(get_iface_imds "$ether" network-card)
     echo ${network_card}
 }
@@ -445,8 +462,8 @@ setup_interface() {
     iface=$1
     ether=$2
 
-    device_number=$(_get_device_number "$iface" "$ether")
     network_card=$(_get_network_card "$iface" "$ether")
+    device_number=$(_get_device_number "$iface" "$ether" "$network_card")
 
     # Newly provisioned resources (new ENI attachments) take some
     # time to be fully reflected in IMDS. In that case, we poll
@@ -461,7 +478,7 @@ setup_interface() {
 
         changes+=$(create_interface_config "$iface" "$device_number" "$network_card" "$ether")
         for family in 4 6; do
-            if [ $device_number -ne 0 ]; then
+            if ! _is_primary_interface "$ether"; then
                 # We only create rules for secondary interfaces so
                 # external tools that modify the main route table can
                 # still communicate with the host's primary IPs.  For
