@@ -13,6 +13,7 @@ BuildArch: noarch
 
 BuildRequires: make
 Requires: systemd-networkd, udev, curl, iproute
+Requires: /usr/bin/md5sum
 Requires: (systemd-resolved or systemd < 250)
 
 %description
