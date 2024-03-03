@@ -10,7 +10,7 @@ Homepage: <insert the upstream URL, if relevant>
 
 Package: amazon-ec2-net-utils
 Architecture: all
-Depends: systemd, udev, curl, iproute2, bash, ${shlibs:Depends}, ${misc:Depends}
+Depends: systemd, udev, curl, iproute2, bash, coreutils, ${shlibs:Depends}, ${misc:Depends}
 Description: utilities for managing network interfaces in Amazon EC2
  amazon-ec2-net-utils provides udev integration and helper utilities
  to manage network configuration in the Amazon EC2 cloud environment
