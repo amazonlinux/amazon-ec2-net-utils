@@ -421,7 +421,7 @@ _get_device_number() {
 
     local -i maxtries=60 ntries=0
     for (( ntries = 0; ntries < maxtries; ntries++ )); do
-        device_number=$(get_iface_imds "$ether" device-number)
+        device_number=$(get_iface_imds "$ether" device-number 1)
         # if either the device number or the card index are nonzero,
         # then we treat the value returned as valid.  Zero values for
         # both is only valid for the primary interface, which we've
@@ -434,6 +434,7 @@ _get_device_number() {
         fi
     done
     error "Unable to identify device-number for $iface after $ntries attempts"
+    echo -1
     return 1
 }
 
@@ -464,12 +465,17 @@ _get_network_card() {
 # interface-specific routing table.
 setup_interface() {
     local iface ether
-    local -i device_number network_card
+    local -i device_number network_card rc
     iface=$1
     ether=$2
 
     network_card=$(_get_network_card "$iface" "$ether")
     device_number=$(_get_device_number "$iface" "$ether" "$network_card")
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        error "Unable to identify device-number for $iface in IMDS"
+        exit 1
+    fi
 
     # Newly provisioned resources (new ENI attachments) take some
     # time to be fully reflected in IMDS. In that case, we poll
