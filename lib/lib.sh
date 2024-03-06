@@ -199,14 +199,15 @@ subnet_prefixroutes() {
 
 create_rules() {
     local iface=$1
-    local ifid=$2
-    local family=$3
+    local device_number=$2
+    local network_card=$3
+    local family=$4
     local addrs prefixes
     local local_addr_key subnet_pd_key
     local drop_in_dir="${unitdir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
 
-    local -i ruleid=$((ifid+rule_base))
+    local -i ruleid=$((device_number+rule_base+100*network_card))
 
     case $family in
         4)
@@ -258,14 +259,15 @@ EOF
 
 create_if_overrides() {
     local iface="$1"; test -n "$iface" || { echo "Invalid iface at $LINENO" >&2 ; exit 1; }
-    local ifid="$2"; test -n "$ifid" || { echo "Invalid ifid at $LINENO" >&2 ; exit 1; }
-    local ether="$3"; test -n "$ether" || { echo "Invalid ether at $LINENO" >&2 ; exit 1; }
-    local cfgfile="$4"; test -n "$cfgfile" || { echo "Invalid cfgfile at $LINENO" >&2 ; exit 1; }
+    local -i device_number="$2"; test -n "$device_number" || { echo "Invalid device_number at $LINENO" >&2 ; exit 1; }
+    local -i network_card="$3"; test -n "$network_card" || { echo "Invalid network_card at $LINENO" >&2 ; exit 1; }
+    local ether="$4"; test -n "$ether" || { echo "Invalid ether at $LINENO" >&2 ; exit 1; }
+    local cfgfile="$5"; test -n "$cfgfile" || { echo "Invalid cfgfile at $LINENO" >&2 ; exit 1; }
 
     local cfgdir="${cfgfile}.d"
     local dropin="${cfgdir}/eni.conf"
-    local -i metric=$((metric_base+10*ifid))
-    local -i tableid=$((rule_base+ifid))
+    local -i metric=$((metric_base+100*network_card+device_number))
+    local -i tableid=$((rule_base+100*network_card+device_number))
 
     mkdir -p "$cfgdir"
     cat <<EOF > "${dropin}.tmp"
@@ -326,9 +328,10 @@ EOF
 add_altnames() {
     local iface=$1
     local ether=$2
-    local eni_id device_number
+    local device_number=$3
+    local network_card=$4
+    local eni_id
     eni_id=$(get_iface_imds "$ether" interface-id)
-    device_number=$(get_iface_imds "$ether" device-number)
     # Interface altnames can also be added using systemd .link files.
     # However, in order to use them, we need to wait until a
     # systemd-networkd reload operation completes and then trigger a
@@ -338,16 +341,26 @@ add_altnames() {
            ! ip link show dev "$iface" | grep -q -E "altname\s+${eni_id}"; then
         ip link property add dev "$iface" altname "$eni_id" || true
     fi
+    local device_number_alt="device-number-${device_number}"
+    if [ -n "$network_card" ]; then
+        # On instance types that don't support a network-card key, we
+        # won't append a value here.  A value of zero would be
+        # appropriate, but would be a visible change to the interface
+        # configuration on these instance types and could disrupt
+        # existing automation.
+        device_number_alt="${device_number_alt}.${network_card}"
+    fi
     if [ -n "$device_number" ] &&
-           ! ip link show dev "$iface" | grep -q -E "altname\s+device-number"; then
-        ip link property add dev "$iface" altname "device-number-${device_number}" || true
+           ! ip link show dev "$device_number_alt" > /dev/null 2>&1; then
+        ip link property add dev "$iface" altname "${device_number_alt}" || true
     fi
 }
 
 create_interface_config() {
     local iface=$1
-    local ifid=$2
-    local ether=$3
+    local device_number=$2
+    local network_card=$3
+    local ether=$4
 
     local libdir=/usr/lib/systemd/network
     local defconfig="${libdir}/80-ec2.network"
@@ -364,9 +377,20 @@ create_interface_config() {
     debug "Linking $cfgfile to $defconfig"
     mkdir -p "$unitdir"
     ln -s "$defconfig" "$cfgfile"
-    retval+=$(create_if_overrides "$iface" "$ifid" "$ether" "$cfgfile")
-    add_altnames "$iface" "$ether"
+    retval+=$(create_if_overrides "$iface" "$device_number" "$network_card" "$ether" "$cfgfile")
+    add_altnames "$iface" "$ether" "$device_number" "$network_card"
     echo $retval
+}
+
+# The primary interface is defined as the interface whose MAC address
+# is in the top-level `mac` key.  It will always have device-number 0
+# and network-card 0.  It gets unique treatment in a few areas.
+_is_primary_interface() {
+    local ether default_mac
+    ether="$1"
+
+    default_mac=$(get_imds mac)
+    [ "$ether" = "$default_mac" ]
 }
 
 # device-number, which represents the DeviceIndex field in an EC2
@@ -380,21 +404,23 @@ create_interface_config() {
 # top-level "mac" field, which is static and guaranteed to be
 # available as soon as the instance launches.
 _get_device_number() {
-    local iface ether default_mac
+    local iface ether network_card_index
     iface="$1"
     ether="$2"
+    network_card_index=${3:-0}
 
-    default_mac=$(get_imds mac)
-
-    if [ "$ether" = "$default_mac" ]; then
-        echo 0
-        return 0
+    if _is_primary_interface "$ether"; then
+        echo 0 ; return 0
     fi
 
     local -i maxtries=60 ntries=0
     for (( ntries = 0; ntries < maxtries; ntries++ )); do
         device_number=$(get_iface_imds "$ether" device-number)
-        if [ $device_number -ne 0 ]; then
+        # if either the device number or the card index are nonzero,
+        # then we treat the value returned as valid.  Zero values for
+        # both is only valid for the primary interface, which we've
+        # already concluded is not this one.
+        if [ $device_number -ne 0 ] || [ $network_card_index -ne 0 ]; then
             echo "$device_number"
             return 0
         else
@@ -404,6 +430,23 @@ _get_device_number() {
     error "Unable to identify device-number for $iface after $ntries attempts"
     return 1
 }
+
+# print the network-card IMDS value for the given interface
+# NOTE: On many instance types, this value is not defined.  This
+# function will print the empty string on those instances.  On
+# instances where it is defined, it will be a numeric value.
+_get_network_card() {
+    local iface ether network_card
+    iface="$1"
+    ether="$2"
+
+    if _is_primary_interface "$ether"; then
+        echo 0 ; return 0
+    fi
+    network_card=$(get_iface_imds "$ether" network-card)
+    echo ${network_card}
+}
+
 
 # Interfaces get configured with addresses and routes from
 # DHCP. Routes are inserted in the main table with metrics based on
@@ -415,11 +458,12 @@ _get_device_number() {
 # interface-specific routing table.
 setup_interface() {
     local iface ether
-    local -i device_number
+    local -i device_number network_card
     iface=$1
     ether=$2
 
-    device_number=$(_get_device_number "$iface" "$ether")
+    network_card=$(_get_network_card "$iface" "$ether")
+    device_number=$(_get_device_number "$iface" "$ether" "$network_card")
 
     # Newly provisioned resources (new ENI attachments) take some
     # time to be fully reflected in IMDS. In that case, we poll
@@ -432,9 +476,9 @@ setup_interface() {
     while [ "$(date +%s)" -lt $deadline ]; do
         local -i changes=0
 
-        changes+=$(create_interface_config "$iface" "$device_number" "$ether")
+        changes+=$(create_interface_config "$iface" "$device_number" "$network_card" "$ether")
         for family in 4 6; do
-            if [ $device_number -ne 0 ]; then
+            if ! _is_primary_interface "$ether"; then
                 # We only create rules for secondary interfaces so
                 # external tools that modify the main route table can
                 # still communicate with the host's primary IPs.  For
@@ -446,7 +490,7 @@ setup_interface() {
                 # they'll redirect the return traffic out ens5 rather
                 # than docker0, effectively blackholing it.
                 # https://github.com/amazonlinux/amazon-ec2-net-utils/issues/97
-                changes+=$(create_rules "$iface" "$device_number" $family)
+                changes+=$(create_rules "$iface" "$device_number" "$network_card" $family)
             fi
         done
         changes+=$(create_ipv4_aliases $iface $ether)
