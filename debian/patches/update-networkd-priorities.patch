@@ -1,15 +1,31 @@
-From 7280ff5206eeed978d4b7f563475e5eba16babab Mon Sep 17 00:00:00 2001
+From 3c792705401188860d8c40fd192701696f77c43c Mon Sep 17 00:00:00 2001
 From: Noah Meyerhans <nmeyerha@amazon.com>
-Date: Wed, 6 Mar 2024 11:37:11 -0800
+Date: Thu, 7 Mar 2024 17:00:45 -0800
 Subject: [PATCH] change the priority of the networkd configs
 
 ensure they're order before netplan
 ---
- lib/lib.sh | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ bin/setup-policy-routes.sh | 4 ++--
+ lib/lib.sh                 | 6 +++---
+ 2 files changed, 5 insertions(+), 5 deletions(-)
 
+diff --git a/bin/setup-policy-routes.sh b/bin/setup-policy-routes.sh
+index a79fd09..9cb623b 100755
+--- a/bin/setup-policy-routes.sh
++++ b/bin/setup-policy-routes.sh
+@@ -62,8 +62,8 @@ remove)
+     register_networkd_reloader
+     info "Removing configuration for $iface."
+     rm -rf "/run/network/$iface" \
+-       "${unitdir}/70-${iface}.network" \
+-       "${unitdir}/70-${iface}.network.d" || true
++       "${unitdir}/07-${iface}.network" \
++       "${unitdir}/07-${iface}.network.d" || true
+     touch "$reload_flag"
+     ;;
+ stop|cleanup)
 diff --git a/lib/lib.sh b/lib/lib.sh
-index c9f1970..8933d7c 100644
+index 0a2ebc2..de3b00f 100644
 --- a/lib/lib.sh
 +++ b/lib/lib.sh
 @@ -151,7 +151,7 @@ create_ipv4_aliases() {
@@ -36,9 +52,9 @@ index c9f1970..8933d7c 100644
  
 -    local cfgfile="${unitdir}/70-${iface}.network"
 +    local cfgfile="${unitdir}/07-${iface}.network"
-     if [ -e "$cfgfile" ]; then
+     if [ -e "$cfgfile" ] &&
+            [ ! -v EC2_IF_INITIAL_SETUP ]; then
          debug "Using existing cfgfile ${cfgfile}"
-         echo $retval
 -- 
 2.25.1
 
