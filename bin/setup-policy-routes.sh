@@ -66,7 +66,13 @@ remove)
        "${unitdir}/70-${iface}.network.d" || true
     touch "$reload_flag"
     ;;
-stop|cleanup)
+cleanup)
+    if [ -e "${lockdir}/${iface}" ]; then
+        info "WARNING: Cleaning up leaked lock ${lockdir}/${iface}"
+        rm -f "${lockdir}/${iface}"
+    fi
+    ;;
+stop)
     # this is a no-op, only supported for compatibility
     :;;
 *)

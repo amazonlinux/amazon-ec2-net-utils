@@ -2,10 +2,6 @@
 Description=Set up policy routes for %I
 StartLimitIntervalSec=10
 StartLimitBurst=5
-Wants=refresh-policy-routes@%i.timer
-
-[Install]
-Also=refresh-policy-routes@%i.timer
 
 [Service]
 Type=oneshot
@@ -15,6 +11,8 @@ AmbientCapabilities=CAP_NET_ADMIN
 NoNewPrivileges=yes
 User=root
 ExecStart=/usr/bin/setup-policy-routes %i start
+ExecStartPost=/usr/bin/setup-policy-routes %i cleanup
+ExecStopPost=/usr/bin/setup-policy-routes %i cleanup
 Restart=on-failure
 RestartSec=1
 KillMode=process
