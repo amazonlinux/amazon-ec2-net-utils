@@ -16,6 +16,8 @@ UDEVRULES=$(wildcard udev/*.rules)
 
 DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SHARE_DIR}
 
+RPMDIR=$(CURDIR)/RPMS/
+
 .PHONY: help
 help: ## show help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -82,3 +84,10 @@ tag: uncommitted-check ## Tag a new release
 	@if git rev-parse --verify v$(version) > /dev/null 2>&1; then \
 		echo "*** ERROR: Version $(version) is already tagged"; exit 1; fi
 	git tag v${version}
+
+.PHONY: integ-tests
+integ-tests: scratch-rpm integ-test
+
+.PHONY: integ-test
+integ-test:
+	python3 test/integ-test/reboot_test.py $(SSH_KEY_NAME) $(RPMDIR)
