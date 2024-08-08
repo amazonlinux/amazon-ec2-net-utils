@@ -95,13 +95,9 @@ get_meta() {
             echo "$meta"
             return 0
         fi
-        if [ ! -v EC2_IF_INITIAL_SETUP ]; then
-            return 1
-        else
-            attempts+=1
-            backoff=$((attempts*ms_per_backoff))
-            sleep $((backoff/1000)).$((backoff%1000))
-        fi
+        attempts+=1
+        backoff=$((attempts*ms_per_backoff))
+        sleep $((backoff/1000)).$((backoff%1000))
     done
     return 1
 }
