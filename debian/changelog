@@ -1,3 +1,9 @@
+amazon-ec2-net-utils (2.5.1) unstable; urgency=medium
+
+  * New upstream release 2.5.1
+
+ -- Sai Harsha <ssuryad@amazon.com>  Fri, 09 Aug 2024 16:44:33 -0000
+
 amazon-ec2-net-utils (2.5.0) unstable; urgency=medium
 
   * New upstream release 2.5.0
