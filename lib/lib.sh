@@ -18,6 +18,7 @@ declare ether
 declare unitdir
 declare lockdir
 declare reload_flag
+declare imds_interface
 
 declare -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::254]/latest")
 declare -r imds_token_path="api/token"
@@ -38,26 +39,49 @@ get_token() {
     # the IMDS API calls.  On initial interface setup, we'll retry
     # this operation for up to 30 seconds, but on subsequent
     # invocations we avoid retrying
-    local deadline
-    deadline=$(date -d "now+30 seconds" +%s)
+    local deadline=$(date -d "now+30 seconds" +%s)
     local old_opts=$-
+
     while [ "$(date +%s)" -lt $deadline ]; do
-        for ep in "${imds_endpoints[@]}"; do
-            set +e
-            imds_token=$(curl --max-time 5 --connect-timeout 0.15 -s --fail \
-                              -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${ep}/${imds_token_path})
-            [[ $old_opts = *e* ]] && set -e
-            if [ -n "$imds_token" ]; then
-                debug "Got IMDSv2 token from ${ep}"
-                imds_endpoint=$ep
-                return
+        for node in /sys/class/net/*; do
+            iface=$(basename "$node")
+            if [ "$iface" == "lo" ]; then
+                continue
             fi
+            debug "[get_token] Gettting token on ${iface}"
+            for ep in "${imds_endpoints[@]}"; do
+                set +e
+                imds_token=$(curl --interface "$iface" \
+                                --max-time 5 \
+                                --connect-timeout 0.15 \
+                                -s \
+                                --fail \
+                                -X PUT \
+                                -H "X-aws-ec2-metadata-token-ttl-seconds: 60" \
+                                "${ep}/${imds_token_path}")
+                
+                [[ $old_opts = *e* ]] && set -e
+
+                if [ -n "$imds_token" ]; then
+                    debug "[get_token] Got IMDSv2 token from ${ep} using interface ${iface}"
+                    imds_endpoint=$ep
+                    imds_interface=$iface
+                    return
+                fi
+
+                debug "[get_token] Failed to get token from ${ep} using interface ${iface}"
+            done
         done
+
         if [ ! -v EC2_IF_INITIAL_SETUP ]; then
             break
         fi
+        
         sleep 0.5
     done
+
+    error "[get_token] Failed to obtain IMDSv2 token within timeout period"
+    return 1
 }
 
 log() {
@@ -89,7 +113,11 @@ get_meta() {
     local url="${imds_endpoint}/meta-data/${key}"
     local meta rc
     while [ $attempts -lt $max_tries ]; do
-        meta=$(curl -s --max-time 5 -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url")
+        interface_opt=""
+        if [ -n "$imds_interface" ]; then
+            interface_opt="--interface $imds_interface"
+        fi
+        meta=$(curl $interface_opt -s --max-time 5 -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url")
         rc=$?
         if [ $rc -eq 0 ]; then
             echo "$meta"
@@ -97,6 +125,7 @@ get_meta() {
         fi
         attempts+=1
     done
+    debug "[get_meta] Failed after $max_tries attempts for key: $key"
     return 1
 }
 
@@ -389,8 +418,8 @@ create_interface_config() {
 _is_primary_interface() {
     local ether default_mac
     ether="$1"
-
     default_mac=$(get_imds mac)
+    debug "[primary-mac] $default_mac"
     [ "$ether" = "$default_mac" ]
 }
 
@@ -422,6 +451,7 @@ _get_device_number() {
         # both is only valid for the primary interface, which we've
         # already concluded is not this one.
         if [ $device_number -ne 0 ] || [ $network_card_index -ne 0 ]; then
+            debug "[get-device] Found device-number $device_number for $iface"
             echo "$device_number"
             return 0
         else
