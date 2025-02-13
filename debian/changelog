@@ -1,3 +1,9 @@
+amazon-ec2-net-utils (2.5.4) unstable; urgency=medium
+
+  * New upstream release 2.5.4
+
+ -- Josiah Vehrs <jvehrs@amazon.com>  Thu, 13 Feb 2025 20:56:41 +0000
+
 amazon-ec2-net-utils (2.5.3) unstable; urgency=medium
 
   * New upstream release 2.5.3
