@@ -116,7 +116,7 @@ get_iface_imds() {
 _install_and_reload() {
     local src=$1
     local dest=$2
-    if [ -e "$dest" ]; then
+    if [[ -e "$dest" && -s "$src" ]]; then
         if [ "$(md5sum < $dest)" = "$(md5sum < $src)" ]; then
             # The config is unchanged since last run. Nothing left to do:
             rm "$src"
@@ -145,6 +145,10 @@ create_ipv4_aliases() {
     local addresses
     subnet_supports_ipv4 "$iface" || return 0
     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
+    if [[ -z "$addresses" ]]; then
+        info "No addresses found for ${iface}"
+        return 0
+    fi
     local drop_in_dir="${unitdir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
     local file="$drop_in_dir/ec2net_alias.conf"
@@ -234,6 +238,10 @@ create_rules() {
     # IMDS failure, a propagation delay, or a legitimately empty
     # response.
     addrs=$(get_iface_imds ${ether} ${local_addr_key} || true)
+    if [[ -z "$addrs" ]]; then
+        info "No addresses found for ${ether}"
+        return 0
+    fi
 
     # don't fail or retry prefix retrieval. IMDS currently returns an
     # error, rather than an empty response, if no prefixes are
@@ -294,15 +302,16 @@ Table=${tableid}
 Gateway=_ipv6ra
 
 EOF
-    for dest in $(subnet_prefixroutes "$ether" ipv6); do
-        cat <<EOF >> "${dropin}.tmp"
+    if subnet_supports_ipv6 "$iface"; then
+        for dest in $(subnet_prefixroutes "$ether" ipv6); do
+            cat <<EOF >> "${dropin}.tmp"
 [Route]
 Table=${tableid}
 Destination=${dest}
 
 EOF
-    done
-
+        done
+    fi
     if subnet_supports_ipv4 "$iface"; then
         # if not in a v6-only network, add IPv4 routes to the private table
         cat <<EOF >> "${dropin}.tmp"

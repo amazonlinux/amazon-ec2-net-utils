@@ -1,6 +1,6 @@
-From 3c792705401188860d8c40fd192701696f77c43c Mon Sep 17 00:00:00 2001
-From: Noah Meyerhans <nmeyerha@amazon.com>
-Date: Thu, 7 Mar 2024 17:00:45 -0800
+From 2761694987b588be2f6cc63e704a421e8a088b81 Mon Sep 17 00:00:00 2001
+From: Joe Kurokawa <joekurok@amazon.com>
+Date: Tue, 6 May 2025 21:31:36 +0000
 Subject: [PATCH] change the priority of the networkd configs
 
 ensure they're order before netplan
@@ -25,19 +25,19 @@ index a79fd09..9cb623b 100755
      ;;
  stop|cleanup)
 diff --git a/lib/lib.sh b/lib/lib.sh
-index 0a2ebc2..de3b00f 100644
+index 981f643..858dc86 100644
 --- a/lib/lib.sh
 +++ b/lib/lib.sh
-@@ -151,7 +151,7 @@ create_ipv4_aliases() {
-     local addresses
-     subnet_supports_ipv4 "$iface" || return 0
-     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
+@@ -149,7 +149,7 @@ create_ipv4_aliases() {
+         info "No addresses found for ${iface}"
+         return 0
+     fi
 -    local drop_in_dir="${unitdir}/70-${iface}.network.d"
 +    local drop_in_dir="${unitdir}/07-${iface}.network.d"
      mkdir -p "$drop_in_dir"
      local file="$drop_in_dir/ec2net_alias.conf"
      local work="${file}.new"
-@@ -210,7 +210,7 @@ create_rules() {
+@@ -208,7 +208,7 @@ create_rules() {
      local family=$4
      local addrs prefixes
      local local_addr_key subnet_pd_key
@@ -46,7 +46,7 @@ index 0a2ebc2..de3b00f 100644
      mkdir -p "$drop_in_dir"
  
      local -i ruleid=$((device_number+rule_base+100*network_card))
-@@ -373,7 +373,7 @@ create_interface_config() {
+@@ -376,7 +376,7 @@ create_interface_config() {
  
      local -i retval=0
  
@@ -56,5 +56,5 @@ index 0a2ebc2..de3b00f 100644
             [ ! -v EC2_IF_INITIAL_SETUP ]; then
          debug "Using existing cfgfile ${cfgfile}"
 -- 
-2.25.1
+2.47.1
 
