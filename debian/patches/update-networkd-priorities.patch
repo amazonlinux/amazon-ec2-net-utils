@@ -1,6 +1,6 @@
-From 2761694987b588be2f6cc63e704a421e8a088b81 Mon Sep 17 00:00:00 2001
+From 5e1071bec2f025a9a90be250239eca5ef1dedb66 Mon Sep 17 00:00:00 2001
 From: Joe Kurokawa <joekurok@amazon.com>
-Date: Tue, 6 May 2025 21:31:36 +0000
+Date: Thu, 8 May 2025 00:00:55 +0000
 Subject: [PATCH] change the priority of the networkd configs
 
 ensure they're order before netplan
@@ -25,10 +25,10 @@ index a79fd09..9cb623b 100755
      ;;
  stop|cleanup)
 diff --git a/lib/lib.sh b/lib/lib.sh
-index 981f643..858dc86 100644
+index 90cad29..936e986 100644
 --- a/lib/lib.sh
 +++ b/lib/lib.sh
-@@ -149,7 +149,7 @@ create_ipv4_aliases() {
+@@ -206,7 +206,7 @@ create_ipv4_aliases() {
          info "No addresses found for ${iface}"
          return 0
      fi
@@ -37,7 +37,7 @@ index 981f643..858dc86 100644
      mkdir -p "$drop_in_dir"
      local file="$drop_in_dir/ec2net_alias.conf"
      local work="${file}.new"
-@@ -208,7 +208,7 @@ create_rules() {
+@@ -265,7 +265,7 @@ create_rules() {
      local family=$4
      local addrs prefixes
      local local_addr_key subnet_pd_key
@@ -46,7 +46,7 @@ index 981f643..858dc86 100644
      mkdir -p "$drop_in_dir"
  
      local -i ruleid=$((device_number+rule_base+100*network_card))
-@@ -376,7 +376,7 @@ create_interface_config() {
+@@ -433,7 +433,7 @@ create_interface_config() {
  
      local -i retval=0
  
