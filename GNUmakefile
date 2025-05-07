@@ -1,5 +1,5 @@
 pkgname=amazon-ec2-net-utils
-version=2.5.4
+version=2.5.5
 
 # Used by 'install'
 PREFIX?=/usr/local
