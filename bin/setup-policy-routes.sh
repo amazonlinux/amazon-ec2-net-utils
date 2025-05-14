@@ -48,9 +48,13 @@ refresh)
     ;;
 start)
     register_networkd_reloader
+    counter=0
     while [ ! -e "/sys/class/net/${iface}" ]; do
-        debug  "Waiting for sysfs node to exist"
+        if ((counter % 1000 == 0)); then
+            debug "Waiting for sysfs node to exist for ${iface} (iteration $counter)"
+        fi
         sleep 0.1
+        ((counter++))
     done
     info "Starting configuration for $iface"
     debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
