@@ -24,6 +24,7 @@ if [ -s /etc/hostname ]; then
     exit 0
 fi
 
+get_token
 hostname=$(get_imds local-hostname)
 
 if [ -n "$hostname" ]; then
