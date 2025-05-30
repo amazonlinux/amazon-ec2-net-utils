@@ -24,35 +24,77 @@ declare -r imds_token_path="api/token"
 declare -r syslog_facility="user"
 declare -r syslog_tag="ec2net"
 declare -i -r rule_base=10000
+declare -r default_route="DEFAULT"
 
 # Systemd installs routes with a metric of 1024 by default.  We
 # override to a lower metric to ensure that our fully configured
 # interfaces are preferred over those in the process of being
 # configured.
 declare -i -r metric_base=512
-declare imds_endpoint imds_token
+declare imds_endpoint=""
+declare imds_token=""
+declare imds_interface=""
+declare self_iface_name=""
+
+make_token_request() {
+    local ep=${1:-""}
+    local interface=${2:-""}
+    local -a curl_opts=(--max-time 5 --connect-timeout 0.15 -s --fail -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+    if [ -n "$interface" ]; then
+        curl_opts+=(--interface "$interface")
+    fi
+    curl "${curl_opts[@]}" "${ep}/${imds_token_path}"
+}
+
+get_lowest_secondary_interface() {
+    # This is the best effort guess at what the lowest secondary interface would be.
+    # We know that systemd will use either en or eth as default prefix.
+    # It will return empty if there are no secondary interfaces.
+    basename -a /sys/class/net/* | grep -E '^e(n|th)' | sort -V  | sed -n '2p'
+}
 
 get_token() {
-    # try getting a token early, using each endpoint in
-    # turn. Whichever endpoint responds will be used for the rest of
-    # the IMDS API calls.  On initial interface setup, we'll retry
+    # Try getting a token early, using each endpoint in
+    # turn. Whichever interface and endpoint responds will be used for all the IMDS calls
+    # used to setup the interface. For IMDS interface we will
+    # try to call the IMDS from its self first, failing that the
+    # primary eni, and failing that the best guess at the 
+    # lowest secondary eni if available.
+    # On initial interface setup, we'll retry
     # this operation for up to 30 seconds, but on subsequent
     # invocations we avoid retrying
     local deadline
+    local intf=$self_iface_name
     deadline=$(date -d "now+30 seconds" +%s)
     local old_opts=$-
+    
     while [ "$(date +%s)" -lt $deadline ]; do
         for ep in "${imds_endpoints[@]}"; do
             set +e
-            imds_token=$(curl --max-time 5 --connect-timeout 0.15 -s --fail \
-                              -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60" ${ep}/${imds_token_path})
+            imds_token=$(make_token_request "$ep" "$intf")
+
+            if [ -z "$imds_token" ]; then
+                imds_token=$(make_token_request "$ep")
+                intf="$default_route"
+            fi
+
+            if [ -z "$imds_token" ]; then
+                lowest_secondary=$(get_lowest_secondary_interface)
+                if [ -n "$lowest_secondary" ]; then
+                    imds_token=$(make_token_request "$ep" "$lowest_secondary")
+                    intf="$lowest_secondary"
+                fi
+            fi
             [[ $old_opts = *e* ]] && set -e
+
             if [ -n "$imds_token" ]; then
-                debug "Got IMDSv2 token from ${ep}"
+                debug "Got IMDSv2 token for interface ${self_iface_name} from ${ep} via ${intf}"
                 imds_endpoint=$ep
+                imds_interface=$intf
                 return
             fi
         done
+
         if [ ! -v EC2_IF_INITIAL_SETUP ]; then
             break
         fi
@@ -85,11 +127,19 @@ get_meta() {
     debug "[get_meta] Querying IMDS for ${key}"
 
     get_token
-
+    if [[ -z $imds_endpoint || -z $imds_token || -z $imds_interface ]]; then
+        error "[get_meta] Unable to obtain IMDS token, endpoint, or interface"
+        return 1
+    fi
     local url="${imds_endpoint}/meta-data/${key}"
     local meta rc
+    local curl_opts=(-s --max-time 5 -H "X-aws-ec2-metadata-token:${imds_token}" -f)
+    if [[ "$imds_interface" != "$default_route" ]]; then
+        curl_opts+=(--interface "$imds_interface")
+    fi
+
     while [ $attempts -lt $max_tries ]; do
-        meta=$(curl -s --max-time 5 -H "X-aws-ec2-metadata-token:${imds_token}" -f "$url")
+        meta=$(curl "${curl_opts[@]}" "$url")
         rc=$?
         if [ $rc -eq 0 ]; then
             echo "$meta"
@@ -472,6 +522,7 @@ setup_interface() {
     local -i device_number network_card rc
     iface=$1
     ether=$2
+    self_iface_name=$1
 
     network_card=$(_get_network_card "$iface" "$ether")
     device_number=$(_get_device_number "$iface" "$ether" "$network_card")
