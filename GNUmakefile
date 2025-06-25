@@ -1,5 +1,5 @@
 pkgname=amazon-ec2-net-utils
-version=2.6.0
+version=2.7.0
 
 # Used by 'install'
 PREFIX?=/usr/local
@@ -26,12 +26,16 @@ ${DIRS}:
 define varsubst
 sed -i "s,AMAZON_EC2_NET_UTILS_LIBDIR,${PREFIX}/share/${pkgname},g" $1
 endef
+define varsubstlibs
+sed -i "s,AMAZON_EC2_NET_UTILS_VERSION,${version},g" $1
+endef
 
 .PHONY: install
 install: ${SHELLSCRIPTS} ${UDEVRULES} ${SHELLLIBS} | ${DIRS} ## Install the software. Respects DESTDIR
 	$(foreach f,${SHELLSCRIPTS},tgt=${BINDIR}/$$(basename --suffix=.sh $f);\
 		install -m755 $f $$tgt;${call varsubst,$$tgt};)
-	$(foreach f,${SHELLLIBS},install -m644 $f ${SHARE_DIR})
+	$(foreach f,${SHELLLIBS},tgt=${SHARE_DIR}/$$(basename $f);\
+		install -m644 $f $$tgt;${call varsubstlibs,$$tgt};)
 	$(foreach f,${UDEVRULES},install -m644 $f ${UDEVDIR};)
 	$(foreach f,$(wildcard systemd/network/*.network),install -m644 $f ${SYSTEMD_NETWORK_DIR};)
 	$(foreach f,$(wildcard systemd/system/*.service systemd/system/*.timer),install -m644 $f ${SYSTEMD_SYSTEM_DIR};)
