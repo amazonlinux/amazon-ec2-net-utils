@@ -71,7 +71,9 @@ get_token() {
     while [ "$(date +%s)" -lt $deadline ]; do
         for ep in "${imds_endpoints[@]}"; do
             set +e
-            imds_token=$(make_token_request "$ep" "$intf")
+            if [ -n "$intf" ]; then
+                imds_token=$(make_token_request "$ep" "$intf")
+            fi
 
             if [ -z "$imds_token" ]; then
                 imds_token=$(make_token_request "$ep")
