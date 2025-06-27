@@ -19,6 +19,12 @@ declare unitdir
 declare lockdir
 declare reload_flag
 
+# Version information - substituted during installation
+declare PACKAGE_VERSION="AMAZON_EC2_NET_UTILS_VERSION"
+if [ -z "$PACKAGE_VERSION" ]; then
+    PACKAGE_VERSION="unknown"
+fi
+declare -r USER_AGENT="amazon-ec2-net-utils/$PACKAGE_VERSION"
 declare -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::254]/latest")
 declare -r imds_token_path="api/token"
 declare -r syslog_facility="user"
@@ -39,7 +45,15 @@ declare self_iface_name=""
 make_token_request() {
     local ep=${1:-""}
     local interface=${2:-""}
-    local -a curl_opts=(--max-time 5 --connect-timeout 0.15 -s --fail -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+    local -a curl_opts=(
+        --max-time 5
+        --connect-timeout 0.15
+        -s
+        --fail
+        -X PUT 
+        -H "X-aws-ec2-metadata-token-ttl-seconds: 60"
+        -A "$USER_AGENT"
+        )
     if [ -n "$interface" ]; then
         curl_opts+=(--interface "$interface")
     fi
@@ -135,7 +149,12 @@ get_meta() {
     fi
     local url="${imds_endpoint}/meta-data/${key}"
     local meta rc
-    local curl_opts=(-s --max-time 5 -H "X-aws-ec2-metadata-token:${imds_token}" -f)
+    local curl_opts=(
+        -s 
+        --max-time 5 
+        -H "X-aws-ec2-metadata-token:${imds_token}" 
+        -f 
+        -A "$USER_AGENT")
     if [[ "$imds_interface" != "$default_route" ]]; then
         curl_opts+=(--interface "$imds_interface")
     fi
