@@ -1,0 +1,13 @@
+[Unit]
+Description=Sets the local hostname defined in IMDS
+After=network-online.target
+Requires=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/set-hostname-imds
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
