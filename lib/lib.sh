@@ -596,7 +596,7 @@ setup_interface() {
 # they're the registered process running.
 maybe_reload_networkd() {
     rm -f "${lockdir}/${iface}"
-    if rmdir "$lockdir" 2> /dev/null; then
+    if [ ! -d "$lockdir" ] || rmdir "$lockdir" 2> /dev/null; then
         if [ -e "$reload_flag" ]; then
             rm -f "$reload_flag" 2> /dev/null
             networkctl reload
