@@ -1,6 +1,6 @@
-From 5e1071bec2f025a9a90be250239eca5ef1dedb66 Mon Sep 17 00:00:00 2001
+From 162c8b20ab93ae22fa0c22816d4fd25ff005221b Mon Sep 17 00:00:00 2001
 From: Joe Kurokawa <joekurok@amazon.com>
-Date: Thu, 8 May 2025 00:00:55 +0000
+Date: Wed, 3 Sep 2025 01:39:29 +0000
 Subject: [PATCH] change the priority of the networkd configs
 
 ensure they're order before netplan
@@ -10,10 +10,10 @@ ensure they're order before netplan
  2 files changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/bin/setup-policy-routes.sh b/bin/setup-policy-routes.sh
-index a79fd09..9cb623b 100755
+index e4c67d8..a8b9fc8 100755
 --- a/bin/setup-policy-routes.sh
 +++ b/bin/setup-policy-routes.sh
-@@ -62,8 +62,8 @@ remove)
+@@ -63,8 +63,8 @@ remove)
      register_networkd_reloader
      info "Removing configuration for $iface."
      rm -rf "/run/network/$iface" \
@@ -25,19 +25,19 @@ index a79fd09..9cb623b 100755
      ;;
  stop|cleanup)
 diff --git a/lib/lib.sh b/lib/lib.sh
-index 90cad29..936e986 100644
+index bb1241a..1d103c8 100644
 --- a/lib/lib.sh
 +++ b/lib/lib.sh
-@@ -206,7 +206,7 @@ create_ipv4_aliases() {
-         info "No addresses found for ${iface}"
-         return 0
-     fi
+@@ -236,7 +236,7 @@ create_ipv4_aliases() {
+     local addresses
+     subnet_supports_ipv4 "$iface" || return 0
+     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
 -    local drop_in_dir="${unitdir}/70-${iface}.network.d"
 +    local drop_in_dir="${unitdir}/07-${iface}.network.d"
      mkdir -p "$drop_in_dir"
      local file="$drop_in_dir/ec2net_alias.conf"
      local work="${file}.new"
-@@ -265,7 +265,7 @@ create_rules() {
+@@ -295,7 +295,7 @@ create_rules() {
      local family=$4
      local addrs prefixes
      local local_addr_key subnet_pd_key
@@ -46,7 +46,7 @@ index 90cad29..936e986 100644
      mkdir -p "$drop_in_dir"
  
      local -i ruleid=$((device_number+rule_base+100*network_card))
-@@ -433,7 +433,7 @@ create_interface_config() {
+@@ -463,7 +463,7 @@ create_interface_config() {
  
      local -i retval=0
  
@@ -56,5 +56,5 @@ index 90cad29..936e986 100644
             [ ! -v EC2_IF_INITIAL_SETUP ]; then
          debug "Using existing cfgfile ${cfgfile}"
 -- 
-2.47.1
+2.47.3
 

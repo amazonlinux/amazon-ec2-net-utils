@@ -42,6 +42,7 @@ do_setup() {
 
 case "$2" in
 refresh)
+    register_networkd_reloader
     [ -e "/sys/class/net/${iface}" ] || exit 0
     info "Starting configuration refresh for $iface"
     do_setup

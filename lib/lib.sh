@@ -40,7 +40,6 @@ declare -i -r metric_base=512
 declare imds_endpoint=""
 declare imds_token=""
 declare imds_interface=""
-declare self_iface_name=""
 
 make_token_request() {
     local ep=${1:-""}
@@ -78,7 +77,8 @@ get_token() {
     # this operation for up to 30 seconds, but on subsequent
     # invocations we avoid retrying
     local deadline
-    local intf=$self_iface_name
+    local intf=${1:-""}
+    local self=$intf
     deadline=$(date -d "now+30 seconds" +%s)
     local old_opts=$-
     
@@ -104,7 +104,7 @@ get_token() {
             [[ $old_opts = *e* ]] && set -e
 
             if [ -n "$imds_token" ]; then
-                debug "Got IMDSv2 token for interface ${self_iface_name} from ${ep} via ${intf}"
+                debug "Got IMDSv2 token for interface ${self} from ${ep} via ${intf}"
                 imds_endpoint=$ep
                 imds_interface=$intf
                 return
@@ -142,7 +142,6 @@ get_meta() {
     declare -i attempts=0
     debug "[get_meta] Querying IMDS for ${key}"
 
-    get_token
     if [[ -z $imds_endpoint || -z $imds_token || -z $imds_interface ]]; then
         error "[get_meta] Unable to obtain IMDS token, endpoint, or interface"
         return 1
@@ -184,18 +183,39 @@ get_iface_imds() {
     get_imds network/interfaces/macs/${mac}/${key} $max_tries
 }
 
+# For adding and removing secondary IP allowing the config (ec2net_alias.conf) file to be deleted when all 
+# secondary IPs are unassigned is valid. For primary IP, the config (ec2net_policy_4/6.conf) 
+# should never be emptied out during it's lifetime. 
+# The removal workflow will handle to the removing of the primary IP config.   
 _install_and_reload() {
     local src=$1
     local dest=$2
-    if [[ -e "$dest" && -s "$src" ]]; then
-        if [ "$(md5sum < $dest)" = "$(md5sum < $src)" ]; then
-            # The config is unchanged since last run. Nothing left to do:
-            rm "$src"
-            echo 0
+    local empty_overwrite=${3:-false}
+    
+    if [[ -e "$dest" ]]; then
+        if [[ -s "$src" ]]; then
+            if [ "$(md5sum < $dest)" = "$(md5sum < $src)" ]; then                
+                # The config is unchanged since last run. Nothing left to do:
+                rm "$src"
+                echo 0
+            else
+                # The file content has changed, we need to reload:
+                mv "$src" "$dest"
+                debug "install_and_reload detected change for: $dest"
+                echo 1
+            fi
         else
-            # The file content has changed, we need to reload:
-            mv "$src" "$dest"
-            echo 1
+            if [[ "$empty_overwrite" == "true" ]]; then
+                # Overwiting dest empty file, or just remove both.
+                rm "$src"
+                rm "$dest"
+                debug "install_and_reload removed: $dest"
+                echo 1
+            else
+                # Ignore empty src, keep dest
+                rm "$src"
+                echo 0
+            fi
         fi
         return
     fi
@@ -204,10 +224,10 @@ _install_and_reload() {
     if [ "$(stat --format=%s $src)" -gt 0 ]; then
         mv "$src" "$dest"
         echo 1
-        return
+    else
+        rm "$src"
+        echo 0
     fi
-    rm "$src"
-    echo 0
 }
 
 create_ipv4_aliases() {
@@ -216,10 +236,6 @@ create_ipv4_aliases() {
     local addresses
     subnet_supports_ipv4 "$iface" || return 0
     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
-    if [[ -z "$addresses" ]]; then
-        info "No addresses found for ${iface}"
-        return 0
-    fi
     local drop_in_dir="${unitdir}/70-${iface}.network.d"
     mkdir -p "$drop_in_dir"
     local file="$drop_in_dir/ec2net_alias.conf"
@@ -233,7 +249,7 @@ Address=${a}/32
 AddPrefixRoute=false
 EOF
     done
-    _install_and_reload "$work" "$file"
+    _install_and_reload "$work" "$file" true
 }
 
 subnet_supports_ipv4() {
@@ -259,7 +275,7 @@ subnet_prefixroutes() {
     local ether=$1
     local family=${2:-ipv4}
     if [ -z "$ether" ]; then
-        err "${FUNCNAME[0]} called without an MAC address"
+        error "${FUNCNAME[0]} called without an MAC address"
         return 1
     fi
     case "$family" in
@@ -333,7 +349,7 @@ Priority=${ruleid}
 Table=${ruleid}
 EOF
     done
-    _install_and_reload "$work" "$file"
+    _install_and_reload "$work" "$file" false
 }
 
 create_if_overrides() {
@@ -543,7 +559,7 @@ setup_interface() {
     local -i device_number network_card rc
     iface=$1
     ether=$2
-    self_iface_name=$1
+    get_token "$iface"
 
     network_card=$(_get_network_card "$iface" "$ether")
     device_number=$(_get_device_number "$iface" "$ether" "$network_card")
