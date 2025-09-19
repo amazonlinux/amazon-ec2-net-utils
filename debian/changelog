@@ -1,3 +1,7 @@
+amazon-ec2-net-utils (2.7.1) unstable; urgency=medium Fri, 19 Sep 2025 22:46:33 +0000
+
+  * New upstream release 2.7.1
+
 amazon-ec2-net-utils (2.7.0) unstable; urgency=medium
 
   * New upstream release 2.7.0
