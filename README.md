@@ -12,14 +12,14 @@ environment. It handles:
 * Configuration of ENIs upon hotplug
 * Routing configuration for delegated prefixes
 
-The version 1.x branch of the amazon-ec2-net-utils package was used in
-Amazon Linux 2 and earlier releases.  It has a long history and is
+<b>The version 1.x branch of the amazon-ec2-net-utils package was used in
+Amazon Linux 2</b> and earlier releases.  It has a long history and is
 tightly coupled to ISC dhclient and initscripts network
 configuration. Both of these components are deprecated and will not
 make up the primary network configuration framework in future releases
-of Amazon Linux or other distributions. The 2.x branch (released from
+of Amazon Linux or other distributions. <b>The 2.x branch (released from
 the `main` branch in git) represents a complete rewrite targeting a
-more modern network management framework.  The rest of this document
+more modern network management framework like AL2023</b>.  The rest of this document
 describes the 2.x branch.
 
 ## Implementation ##
@@ -100,7 +100,7 @@ that booted with amazon-ec2-net-utils.
       2 ens5 ether    routable    configured
 
     [ec2-user@ip-172-31-41-210 ~]$ networkctl status ens5
-  ● 2: ens5                       
+    ● 2: ens5                       
                       Link File: /usr/lib/systemd/network/99-default.link
                     Network File: /run/systemd/network/70-ens5.network
                           State: routable (configured)
@@ -129,26 +129,26 @@ that booted with amazon-ec2-net-utils.
               DHCP6 Client IAID: 0xed10bdb8
               DHCP6 Client DUID: DUID-EN/Vendor:0000ab115a2053b21e6b7f0a
 
-  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Configuring with /usr/lib/systemd/network/80-ec2.network.
-  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Link UP
-  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Gained carrier
-  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: DHCPv4 address 172.31.41.210/20, gateway 172.31.32.1 acquired from 172.31.32.1
-  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Gained IPv6LL
-  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: Reconfiguring with /run/systemd/network/70-ens5.network.
-  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCP lease lost
-  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCPv6 lease lost
-  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCPv4 address 172.31.41.210/20, gateway 172.31.32.1 acquired from 172.31.32.1
-
-  [ec2-user@ip-172-31-41-210 ~]$ resolvectl
-  Global
-        Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
-  resolv.conf mode: uplink
-
-  Link 2 (ens5)
-  Current Scopes: DNS
-      Protocols: +DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
-    DNS Servers: 172.31.0.2
-      DNS Domain: us-west-2.compute.internal
+            Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Configuring with /usr/lib/systemd/network/80-ec2.network.
+            Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Link UP
+            Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Gained carrier
+            Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: DHCPv4 address 172.31.41.210/20, gateway 172.31.32.1 acquired from 172.31.32.1
+            Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Gained IPv6LL
+            Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: Reconfiguring with /run/systemd/network/70-ens5.network.
+            Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCP lease lost
+            Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCPv6 lease lost
+            Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCPv4 address 172.31.41.210/20, gateway 172.31.32.1 acquired from 172.31.32.1
+          
+    [ec2-user@ip-172-31-41-210 ~]$ resolvectl
+     Global
+          Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+     resolv.conf mode: uplink
+  
+     Link 2 (ens5)
+     Current Scopes: DNS
+        Protocols: +DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+      DNS Servers: 172.31.0.2
+        DNS Domain: us-west-2.compute.internal
 
 ## Getting help ##
 
