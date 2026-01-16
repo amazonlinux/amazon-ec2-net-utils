@@ -78,71 +78,77 @@ that booted with amazon-ec2-net-utils.
     $ mkdir -p rpmbuild/BUILD
     $ git -C amazon-ec2-net-utils/ archive main | (cd rpmbuild/BUILD/ && tar xvf -)
     $ rpmbuild -bb rpmbuild/BUILD/amazon-ec2-net-utils.spec
-    $ sudo dnf install rpmbuild/RPMS/noarch/amazon-ec2-net-utils-2.0.0-1.al2022.noarch.rpm
+    $ sudo dnf install rpmbuild/RPMS/noarch/amazon-ec2-net-utils-*.al2023.noarch.rpm
  
 ### dpkg build and installation ###
 
     $ dpkg-buildpackage -uc -us -b
-    $ sudo apt install ../amazon-ec2-net-utils_2.0.0-1_all.deb
+    $ sudo apt install ../amazon-ec2-net-utils_*_all.deb
  
 ### Installation verification ###
 
     $ # inspect the state of the system to verify that networkd is running:
     $ networkctl # should report all physical interfaces as "routable" and "configured"
-    $ networkctl status eth0 # should report "/run/systemd/network/70-eth0.network" as the network conf file
+    $ networkctl status ens5 # should report "/run/systemd/network/70-ens5.network" as the network conf file
     $ resolvectl # show status of systemd-resolved
 
 **Example:**
 
-    [ec2-user@ip-10-0-0-114 ~]$ networkctl
+    [ec2-user@ip-172-31-41-210 ~]$ networkctl
     IDX LINK TYPE     OPERATIONAL SETUP
-     1 lo   loopback carrier     unmanaged
-     2 eth0 ether    routable    configured
+      1 lo   loopback carrier     unmanaged
+      2 ens5 ether    routable    configured
 
-    2 links listed.
-    [ec2-user@ip-10-0-0-114 ~]$ networkctl status eth0
-    ● 2: eth0
-                        Link File: /usr/lib/systemd/network/99-default.link
-                     Network File: /run/systemd/network/70-eth0.network
-                             Type: ether
-                            State: routable (configured)
-                Alternative Names: enp0s5
-                                   ens5
-                             Path: pci-0000:00:05.0
-                           Driver: ena
-                           Vendor: Amazon.com, Inc.
-                            Model: Elastic Network Adapter (ENA)
-                       HW Address: 02:c9:76:e3:18:0b
-                              MTU: 9001 (min: 128, max: 9216)
-                            QDisc: mq
-     IPv6 Address Generation Mode: eui64
-             Queue Length (Tx/Rx): 2/2
-                          Address: 10.0.0.114 (DHCP4 via 10.0.0.1)
-                                   fe80::c9:76ff:fee3:180b
-                          Gateway: 10.0.0.1
-                              DNS: 10.0.0.2
-                Activation Policy: up
-                  DHCP4 Client ID: IAID:0xed10bdb8/DUID
-                DHCP6 Client DUID: DUID-EN/Vendor:0000ab11a9aa54876c81082a0000
+    [ec2-user@ip-172-31-41-210 ~]$ networkctl status ens5
+  ● 2: ens5                       
+                      Link File: /usr/lib/systemd/network/99-default.link
+                    Network File: /run/systemd/network/70-ens5.network
+                          State: routable (configured)
+                    Online state: online
+                            Type: ether
+                            Path: pci-0000:00:05.0
+                          Driver: ena
+                          Vendor: Amazon.com, Inc.
+                          Model: Elastic Network Adapter (ENA)
+              Alternative Names: device-number-0.0
+                                  eni-0304feb62015b7959
+                                  enp0s5
+                Hardware Address: 06:53:e1:d8:f9:29
+                            MTU: 9001 (min: 128, max: 9216)
+                          QDisc: mq
+    IPv6 Address Generation Mode: eui64
+        Number of Queues (Tx/Rx): 2/2
+                        Address: 172.31.41.210 (DHCP4 via 172.31.32.1)
+                                  fe80::453:e1ff:fed8:f929
+                        Gateway: 172.31.32.1
+                            DNS: 172.31.0.2
+                  Search Domains: us-west-2.compute.internal
+              Activation Policy: up
+            Required For Online: yes
+                DHCP4 Client ID: IAID:0xed10bdb8/DUID
+              DHCP6 Client IAID: 0xed10bdb8
+              DHCP6 Client DUID: DUID-EN/Vendor:0000ab115a2053b21e6b7f0a
 
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: Link UP
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: Gained carrier
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: Gained IPv6LL
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: DHCPv4 address 10.0.0.114/24 via 10.0.0.1
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: Re-configuring with /run/systemd/network/70-eth0.net>
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: DHCP lease lost
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: DHCPv6 lease lost
-    Sep 01 17:44:54 ip-10-0-0-114.us-west-2.compute.internal systemd-networkd[2042]: eth0: DHCPv4 address 10.0.0.114/24 via 10.0.0.1
-    [ec2-user@ip-10-0-0-114 ~]$ resolvectl
-    Global
-          Protocols: LLMNR=resolve -mDNS -DNSOverTLS DNSSEC=no/unsupported
-    resolv.conf mode: uplink
+  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Configuring with /usr/lib/systemd/network/80-ec2.network.
+  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Link UP
+  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Gained carrier
+  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: DHCPv4 address 172.31.41.210/20, gateway 172.31.32.1 acquired from 172.31.32.1
+  Jan 16 19:49:32 localhost systemd-networkd[1828]: ens5: Gained IPv6LL
+  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: Reconfiguring with /run/systemd/network/70-ens5.network.
+  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCP lease lost
+  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCPv6 lease lost
+  Jan 16 19:49:33 localhost systemd-networkd[1828]: ens5: DHCPv4 address 172.31.41.210/20, gateway 172.31.32.1 acquired from 172.31.32.1
 
-    Link 2 (eth0)
-       Current Scopes: DNS
-            Protocols: +DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
-    Current DNS Server: 10.0.0.2
-          DNS Servers: 10.0.0.2
+  [ec2-user@ip-172-31-41-210 ~]$ resolvectl
+  Global
+        Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+  resolv.conf mode: uplink
+
+  Link 2 (ens5)
+  Current Scopes: DNS
+      Protocols: +DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported
+    DNS Servers: 172.31.0.2
+      DNS Domain: us-west-2.compute.internal
 
 ## Getting help ##
 
