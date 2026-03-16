@@ -643,8 +643,8 @@ register_networkd_reloader() {
         # If the redirect fails, most likely because the target file
         # already exists and -o noclobber is in effect, $? will be set
         # nonzero.  If it succeeds, it is set to 0
-        echo $$ > "${lockfile}"
-	# shellcheck disable=SC2320
+        2>/dev/null echo $$ > "${lockfile}"
+        # shellcheck disable=SC2320
         registered=$?
         [ $registered -eq 0 ] && break
         sleep 0.1
