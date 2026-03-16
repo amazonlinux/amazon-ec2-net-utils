@@ -1,5 +1,5 @@
 Name:    amazon-ec2-net-utils
-%define  base_version 2.7.1
+%define  base_version 2.7.2
 %define  source_version %{base_version}%{?_source_version_suffix}
 Version: %{base_version}%{?_rpm_version_suffix}
 Release: 1%{?dist}
@@ -39,21 +39,35 @@ make install DESTDIR=%{buildroot} PREFIX=/usr
 %{_bindir}/set-hostname-imds
 %dir %{_datarootdir}/amazon-ec2-net-utils
 %{_datarootdir}/amazon-ec2-net-utils/lib.sh
+/etc/sysctl.d/90-ena-tuning-defaults.conf
 
 %post
 
-setup_policy_routes() {
+setup_interfaces() {
     local iface node
+    
+    # Apply global sysctl defaults for new interfaces
+    sysctl -p /etc/sysctl.d/90-ena-tuning-defaults.conf >/dev/null || true
+    
     for node in /sys/class/net/*; do
-	iface=$(basename $node)
-	unset ID_NET_DRIVER
-	eval $(udevadm info --export --query=property /sys/class/net/$iface)
-	case $ID_NET_DRIVER in
-	    ena|ixgbevf|vif)
-		systemctl restart policy-routes@${iface}.service
-		systemctl start refresh-policy-routes@${iface}.timer
-		;;
-	esac
+        iface=$(basename $node)
+        unset ID_NET_DRIVER
+        eval $(udevadm info --export --query=property /sys/class/net/$iface)
+        case $ID_NET_DRIVER in
+            ena|ixgbevf|vif)
+                # Apply per-interface sysctl tuning or else we need to reboot.
+                cat > /etc/sysctl.d/90-ena-tuning-${iface}.conf <<EOF
+# amazon-ec2-net-utils ENA tuning:
+net.ipv4.neigh.${iface}.delay_first_probe_time=1
+net.ipv4.neigh.${iface}.base_reachable_time_ms=5000
+net.ipv4.neigh.${iface}.retrans_time_ms=500
+net.ipv4.neigh.${iface}.ucast_solicit=0
+EOF
+                sysctl -p /etc/sysctl.d/90-ena-tuning-${iface}.conf >/dev/null || true
+                systemctl restart policy-routes@${iface}.service
+                systemctl start refresh-policy-routes@${iface}.timer
+            ;;
+        esac
     done
 }
 
@@ -68,15 +82,22 @@ if [ $1 -eq 1 ]; then
     if [ -d /run/systemd/system ]; then
 	systemctl stop NetworkManager.service
 	systemctl start systemd-networkd.service
-	setup_policy_routes
+	setup_interfaces
 	systemctl start systemd-resolved.service
     fi
 elif [ $1 -gt 1 ]; then
     # This is an upgrade, there's less setup to do, but we do want to
     # ensure we apply any configuration introduced by the new version
     systemctl daemon-reload
-    setup_policy_routes
+    setup_interfaces
 fi
 
-%changelog
+%postun
+# Make sure to config is revertable upon downgrade if something goes south.
+if [ -f /etc/sysctl.d/90-ena-tuning-defaults.conf ]; then
+    rm -f /etc/sysctl.d/90-ena-tuning-defaults.conf
+fi
+rm -f /etc/sysctl.d/90-ena-tuning-*.conf
+sysctl --system >/dev/null || true
 
+%changelog

@@ -1,5 +1,5 @@
 pkgname=amazon-ec2-net-utils
-version=2.7.1
+version=2.7.2
 
 # Used by 'install'
 PREFIX?=/usr/local
@@ -9,12 +9,13 @@ SYSTEMDDIR=${DESTDIR}/usr/lib/systemd
 SYSTEMD_SYSTEM_DIR=${SYSTEMDDIR}/system
 SYSTEMD_NETWORK_DIR=${SYSTEMDDIR}/network
 SHARE_DIR=${DESTDIR}/${PREFIX}/share/${pkgname}
+SYSCTLDIR=${DESTDIR}/etc/sysctl.d
 
 SHELLSCRIPTS=$(wildcard bin/*.sh)
 SHELLLIBS=$(wildcard lib/*.sh)
 UDEVRULES=$(wildcard udev/*.rules)
 
-DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SHARE_DIR}
+DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SHARE_DIR} ${SYSCTLDIR}
 
 .PHONY: help
 help: ## show help
@@ -37,6 +38,7 @@ install: ${SHELLSCRIPTS} ${UDEVRULES} ${SHELLLIBS} | ${DIRS} ## Install the soft
 	$(foreach f,${SHELLLIBS},tgt=${SHARE_DIR}/$$(basename $f);\
 		install -m644 $f $$tgt;${call varsubstlibs,$$tgt};)
 	$(foreach f,${UDEVRULES},install -m644 $f ${UDEVDIR};)
+	install -m644 sysctl/90-ena-tuning-defaults.conf ${SYSCTLDIR}/90-ena-tuning-defaults.conf
 	$(foreach f,$(wildcard systemd/network/*.network),install -m644 $f ${SYSTEMD_NETWORK_DIR};)
 	$(foreach f,$(wildcard systemd/system/*.service systemd/system/*.timer),install -m644 $f ${SYSTEMD_SYSTEM_DIR};)
 
