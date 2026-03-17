@@ -41,6 +41,12 @@ declare imds_endpoint=""
 declare imds_token=""
 declare imds_interface=""
 
+# Debug logging: when non-empty, debug messages are sent to syslog.
+# Set via environment (e.g. systemd: Environment=EC2_NET_UTILS_DEBUG=1) or
+# uncomment the next line for temporary local debugging:
+# EC2_NET_UTILS_DEBUG=1
+: "${EC2_NET_UTILS_DEBUG:=}"
+
 make_token_request() {
     local ep=${1:-""}
     local interface=${2:-""}
@@ -124,8 +130,12 @@ log() {
     logger --id=$$ --priority "${syslog_facility}.${priority}" --tag "$syslog_tag" "$@"
 }
 
+# When EC2_NET_UTILS_DEBUG is set (e.g. 1, true, yes), debug messages are logged.
+# Omit the variable or set it empty to suppress debug (default).
 debug() {
-    log debug "$@"
+    if [ -n "${EC2_NET_UTILS_DEBUG:-}" ]; then
+        log debug "$@"
+    fi
 }
 
 info() {
@@ -326,7 +336,7 @@ create_rules() {
     # response.
     addrs=$(get_iface_imds ${ether} ${local_addr_key} || true)
     if [[ -z "$addrs" ]]; then
-        info "No addresses found for ${ether}"
+        debug "No addresses found for ${iface}"
         return 0
     fi
 
