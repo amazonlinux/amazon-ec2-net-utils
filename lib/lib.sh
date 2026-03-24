@@ -140,7 +140,7 @@ get_meta() {
     local key=$1
     local max_tries=${2:-10}
     declare -i attempts=0
-    debug "[get_meta] Querying IMDS for ${key}"
+    [ -v EC2_IF_INITIAL_SETUP ] && debug "[get_meta] Querying IMDS for ${key}"
 
     if [[ -z $imds_endpoint || -z $imds_token || -z $imds_interface ]]; then
         error "[get_meta] Unable to obtain IMDS token, endpoint, or interface"
@@ -326,7 +326,7 @@ create_rules() {
     # response.
     addrs=$(get_iface_imds ${ether} ${local_addr_key} || true)
     if [[ -z "$addrs" ]]; then
-        info "No addresses found for ${ether}"
+        debug "No addresses found for ${ether}"
         return 0
     fi
 
@@ -466,7 +466,6 @@ create_interface_config() {
     local cfgfile="${unitdir}/70-${iface}.network"
     if [ -e "$cfgfile" ] &&
            [ ! -v EC2_IF_INITIAL_SETUP ]; then
-        debug "Using existing cfgfile ${cfgfile}"
         echo $retval
         return
     fi
@@ -616,9 +615,9 @@ maybe_reload_networkd() {
         if [ -e "$reload_flag" ]; then
             rm -f "$reload_flag" 2> /dev/null
             networkctl reload
-            info "Reloaded networkd"
+            debug "Reloaded networkd"
         else
-            debug "No networkd reload needed"
+            [ -v EC2_IF_INITIAL_SETUP ] && debug "No networkd reload needed"
         fi
     else
         debug "Deferring networkd reload to another process"
@@ -639,7 +638,7 @@ register_networkd_reloader() {
     while [ $cnt -lt $max ]; do
         cnt+=1
         mkdir -p "$lockdir"
-        trap 'debug "Called trap" ; maybe_reload_networkd' EXIT
+        trap '[ -v EC2_IF_INITIAL_SETUP ] && debug "Called trap" ; maybe_reload_networkd' EXIT
         # If the redirect fails, most likely because the target file
         # already exists and -o noclobber is in effect, $? will be set
         # nonzero.  If it succeeds, it is set to 0
@@ -649,7 +648,7 @@ register_networkd_reloader() {
         [ $registered -eq 0 ] && break
         sleep 0.1
         if (( $cnt % 100 == 0 )); then
-            info "Unable to lock ${iface} after ${cnt} tries."
+            debug "Unable to lock ${iface} after ${cnt} tries."
         fi
     done
     # re-enable -o errexit if it had originally been set
