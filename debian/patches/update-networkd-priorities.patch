@@ -10,12 +10,12 @@ ensure they're order before netplan
  2 files changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/bin/setup-policy-routes.sh b/bin/setup-policy-routes.sh
-index e4c67d8..a8b9fc8 100755
+index 7c51089..335ce18 100755
 --- a/bin/setup-policy-routes.sh
 +++ b/bin/setup-policy-routes.sh
-@@ -63,8 +63,8 @@ remove)
+@@ -67,8 +67,8 @@ remove)
      register_networkd_reloader
-     info "Removing configuration for $iface."
+     debug "Removing configuration for $iface."
      rm -rf "/run/network/$iface" \
 -       "${unitdir}/70-${iface}.network" \
 -       "${unitdir}/70-${iface}.network.d" || true
@@ -25,7 +25,7 @@ index e4c67d8..a8b9fc8 100755
      ;;
  stop|cleanup)
 diff --git a/lib/lib.sh b/lib/lib.sh
-index bb1241a..1d103c8 100644
+index fb1f2a8..8cbb1e8 100644
 --- a/lib/lib.sh
 +++ b/lib/lib.sh
 @@ -236,7 +236,7 @@ create_ipv4_aliases() {
@@ -54,7 +54,7 @@ index bb1241a..1d103c8 100644
 +    local cfgfile="${unitdir}/07-${iface}.network"
      if [ -e "$cfgfile" ] &&
             [ ! -v EC2_IF_INITIAL_SETUP ]; then
-         debug "Using existing cfgfile ${cfgfile}"
+         echo $retval
 -- 
 2.47.3
 

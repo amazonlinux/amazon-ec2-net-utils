@@ -44,7 +44,7 @@ case "$2" in
 refresh)
     register_networkd_reloader
     [ -e "/sys/class/net/${iface}" ] || exit 0
-    info "Starting configuration refresh for $iface"
+    debug "Starting configuration refresh for $iface"
     do_setup
     ;;
 start)
@@ -57,7 +57,7 @@ start)
         sleep 0.1
         ((counter++))
     done
-    info "Starting configuration for $iface"
+    debug "Starting configuration for $iface"
     debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
     /lib/systemd/systemd-networkd-wait-online -i "$iface"
     export EC2_IF_INITIAL_SETUP=1
@@ -65,7 +65,7 @@ start)
     ;;
 remove)
     register_networkd_reloader
-    info "Removing configuration for $iface."
+    debug "Removing configuration for $iface."
     rm -rf "/run/network/$iface" \
        "${unitdir}/70-${iface}.network" \
        "${unitdir}/70-${iface}.network.d" || true
