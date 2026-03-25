@@ -617,7 +617,9 @@ maybe_reload_networkd() {
             networkctl reload
             debug "Reloaded networkd"
         else
-            [ -v EC2_IF_INITIAL_SETUP ] && debug "No networkd reload needed"
+            if [ -v EC2_IF_INITIAL_SETUP ]; then
+                debug "No networkd reload needed"
+            fi
         fi
     else
         debug "Deferring networkd reload to another process"
