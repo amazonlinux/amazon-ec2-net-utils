@@ -230,13 +230,27 @@ _install_and_reload() {
     fi
 }
 
+_get_active_dropin_dir() {
+    local iface=$1
+    local default_dir="${unitdir}/70-${iface}.network.d"
+    local ifindex network_file
+    ifindex=$(cat "/sys/class/net/${iface}/ifindex" 2> /dev/null) || { echo "$default_dir"; return; }
+    network_file=$(sed -n 's/^NETWORK_FILE=//p' "/run/systemd/netif/links/${ifindex}" 2> /dev/null) || { echo "$default_dir"; return; }
+    if [ -n "$network_file" ]; then
+        echo "${network_file}.d"
+    else
+        echo "$default_dir"
+    fi
+}
+
 create_ipv4_aliases() {
     local iface=$1
     local mac=$2
     local addresses
     subnet_supports_ipv4 "$iface" || return 0
     addresses=$(get_iface_imds $mac local-ipv4s | tail -n +2 | sort)
-    local drop_in_dir="${unitdir}/70-${iface}.network.d"
+    local drop_in_dir
+    drop_in_dir=$(_get_active_dropin_dir "$iface")
     mkdir -p "$drop_in_dir"
     local file="$drop_in_dir/ec2net_alias.conf"
     local work="${file}.new"
@@ -295,7 +309,8 @@ create_rules() {
     local family=$4
     local addrs prefixes
     local local_addr_key subnet_pd_key
-    local drop_in_dir="${unitdir}/70-${iface}.network.d"
+    local drop_in_dir
+    drop_in_dir=$(_get_active_dropin_dir "$iface")
     mkdir -p "$drop_in_dir"
 
     local -i ruleid=$((device_number+rule_base+100*network_card))
