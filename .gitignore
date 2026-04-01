@@ -1,0 +1,13 @@
+# Dev Container
+/.devcontainer/
+
+# VS Code
+.vscode
+*.code-workspace
+
+# IDE
+.cursor
+.kiro
+
+# Miscellaneous files
+*.DS_Store
