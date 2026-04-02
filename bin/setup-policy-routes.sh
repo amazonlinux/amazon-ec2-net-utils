@@ -56,7 +56,7 @@ start)
             debug "Waiting for sysfs node to exist for ${iface} (iteration $counter)"
         fi
         sleep 0.1
-        ((counter++))
+        ((counter++)) || true
         if ((counter >= max_wait)); then
             error "Timed out waiting for sysfs node for ${iface} after $((counter / 10)) seconds"
             exit 1
