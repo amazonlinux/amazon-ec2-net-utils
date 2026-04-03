@@ -631,9 +631,21 @@ maybe_reload_networkd() {
 
 register_networkd_reloader() {
     local -i registered=1 cnt=0
-    local -i max=10000
+    local -i max=3000   # 300s (3000 × 0.1s); matches sysfs wait timeout in setup-policy-routes.sh
     local -r lockfile="${lockdir}/${iface}"
     local old_opts=$-
+
+    # If the existing lock owner is no longer alive, remove the stale lockfile
+    # so subsequent invocations don't spin for up to 1000 seconds waiting on a
+    # process that will never release it.
+    if [ -f "${lockfile}" ]; then
+        local existing_pid
+        existing_pid=$(cat "${lockfile}" 2>/dev/null)
+        if [ -n "$existing_pid" ] && ! kill -0 "$existing_pid" 2>/dev/null; then
+            debug "Removing stale lock from dead process $existing_pid for ${iface}"
+            rm -f "${lockfile}"
+        fi
+    fi
 
     # Disable -o errexit in the following block so we can capture
     # nonzero exit codes from a redirect without considering them
