@@ -59,7 +59,8 @@ start)
         ((counter++)) || true
         if ((counter >= max_wait)); then
             error "Timed out waiting for sysfs node for ${iface} after $((counter / 10)) seconds"
-            exit 1
+            /usr/bin/systemctl disable --now refresh-policy-routes@${iface}.timer 2>/dev/null || true
+            exit 2
         fi
     done
     debug "Starting configuration for $iface"
