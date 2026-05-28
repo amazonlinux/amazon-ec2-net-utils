@@ -18,6 +18,7 @@ declare ether
 declare unitdir
 declare lockdir
 declare reload_flag
+declare runtimeroot
 
 # Version information - substituted during installation
 declare PACKAGE_VERSION="AMAZON_EC2_NET_UTILS_VERSION"
@@ -532,6 +533,16 @@ _get_device_number() {
 # NOTE: On many instance types, this value is not defined.  This
 # function will print the empty string on those instances.  On
 # instances where it is defined, it will be a numeric value.
+#
+# The value, like device-number, may not have propagated to IMDS
+# when a hot-plugged interface first appears.  We can't tell
+# "undefined for this instance type" from "not yet propagated" from
+# a single query, so we retry on empty.  Once the first ENI on this
+# boot has exhausted the retry loop with no value, we touch a marker
+# so subsequent ENIs skip the retry entirely. Without
+# this retry we can silently substitute 0 for a real network-card
+# index on multi-card instances, colliding route metrics and
+# routing-table IDs across interfaces.
 _get_network_card() {
     local iface ether network_card
     iface="$1"
@@ -540,8 +551,26 @@ _get_network_card() {
     if _is_primary_interface "$ether"; then
         echo 0 ; return 0
     fi
-    network_card=$(get_iface_imds "$ether" network-card)
+
+    local marker="${runtimeroot}/.no-network-card"
+    if [ -e "$marker" ]; then
+        echo ${network_card}
+        return 0
+    fi
+
+    local -i maxtries=40 ntries=0
+    for (( ntries = 0; ntries < maxtries; ntries++ )); do
+        network_card=$(get_iface_imds "$ether" network-card 1)
+        if [ -n "$network_card" ]; then
+            echo "$network_card"
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    touch "$marker"
     echo ${network_card}
+    return 0
 }
 
 
