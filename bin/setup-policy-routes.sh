@@ -50,12 +50,18 @@ refresh)
 start)
     register_networkd_reloader
     counter=0
+    max_wait=3000   # 5 minute timeout to avoid infinite loop if sysfs node never appears
     while [ ! -e "/sys/class/net/${iface}" ]; do
         if ((counter % 1000 == 0)); then
             debug "Waiting for sysfs node to exist for ${iface} (iteration $counter)"
         fi
         sleep 0.1
-        ((counter++))
+        ((counter++)) || true
+        if ((counter >= max_wait)); then
+            error "Timed out waiting for sysfs node for ${iface} after $((counter / 10)) seconds"
+            /usr/bin/systemctl disable --now refresh-policy-routes@${iface}.timer 2>/dev/null || true
+            exit 2
+        fi
     done
     debug "Starting configuration for $iface"
     debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
