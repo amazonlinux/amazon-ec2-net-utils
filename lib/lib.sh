@@ -18,6 +18,7 @@ declare ether
 declare unitdir
 declare lockdir
 declare reload_flag
+declare runtimeroot
 
 # Version information - substituted during installation
 declare PACKAGE_VERSION="AMAZON_EC2_NET_UTILS_VERSION"
@@ -140,7 +141,9 @@ get_meta() {
     local key=$1
     local max_tries=${2:-10}
     declare -i attempts=0
-    [ -v EC2_IF_INITIAL_SETUP ] && debug "[get_meta] Querying IMDS for ${key}"
+    if [ -v EC2_IF_INITIAL_SETUP ]; then
+        debug "[get_meta] Querying IMDS for ${key}"
+    fi
 
     if [[ -z $imds_endpoint || -z $imds_token || -z $imds_interface ]]; then
         error "[get_meta] Unable to obtain IMDS token, endpoint, or interface"
@@ -532,6 +535,16 @@ _get_device_number() {
 # NOTE: On many instance types, this value is not defined.  This
 # function will print the empty string on those instances.  On
 # instances where it is defined, it will be a numeric value.
+#
+# The value, like device-number, may not have propagated to IMDS
+# when a hot-plugged interface first appears.  We can't tell
+# "undefined for this instance type" from "not yet propagated" from
+# a single query, so we retry on empty.  Once the first ENI on this
+# boot has exhausted the retry loop with no value, we touch a marker
+# so subsequent ENIs skip the retry entirely. Without
+# this retry we can silently substitute 0 for a real network-card
+# index on multi-card instances, colliding route metrics and
+# routing-table IDs across interfaces.
 _get_network_card() {
     local iface ether network_card
     iface="$1"
@@ -540,8 +553,26 @@ _get_network_card() {
     if _is_primary_interface "$ether"; then
         echo 0 ; return 0
     fi
-    network_card=$(get_iface_imds "$ether" network-card)
+
+    local marker="${runtimeroot}/.no-network-card"
+    if [ -e "$marker" ]; then
+        echo ${network_card}
+        return 0
+    fi
+
+    local -i maxtries=40 ntries=0
+    for (( ntries = 0; ntries < maxtries; ntries++ )); do
+        network_card=$(get_iface_imds "$ether" network-card 1)
+        if [ -n "$network_card" ]; then
+            echo "$network_card"
+            return 0
+        fi
+        sleep 0.1
+    done
+
+    touch "$marker"
     echo ${network_card}
+    return 0
 }
 
 
@@ -617,7 +648,9 @@ maybe_reload_networkd() {
             networkctl reload
             debug "Reloaded networkd"
         else
-            [ -v EC2_IF_INITIAL_SETUP ] && debug "No networkd reload needed"
+            if [ -v EC2_IF_INITIAL_SETUP ]; then
+                debug "No networkd reload needed"
+            fi
         fi
     else
         debug "Deferring networkd reload to another process"
@@ -627,9 +660,21 @@ maybe_reload_networkd() {
 
 register_networkd_reloader() {
     local -i registered=1 cnt=0
-    local -i max=10000
+    local -i max=3000   # 300s (3000 × 0.1s); matches sysfs wait timeout in setup-policy-routes.sh
     local -r lockfile="${lockdir}/${iface}"
     local old_opts=$-
+
+    # If the existing lock owner is no longer alive, remove the stale lockfile
+    # so subsequent invocations don't spin for up to 1000 seconds waiting on a
+    # process that will never release it.
+    if [ -f "${lockfile}" ]; then
+        local existing_pid
+        existing_pid=$(cat "${lockfile}" 2>/dev/null)
+        if [ -n "$existing_pid" ] && ! kill -0 "$existing_pid" 2>/dev/null; then
+            debug "Removing stale lock from dead process $existing_pid for ${iface}"
+            rm -f "${lockfile}"
+        fi
+    fi
 
     # Disable -o errexit in the following block so we can capture
     # nonzero exit codes from a redirect without considering them
@@ -638,7 +683,7 @@ register_networkd_reloader() {
     while [ $cnt -lt $max ]; do
         cnt+=1
         mkdir -p "$lockdir"
-        trap '[ -v EC2_IF_INITIAL_SETUP ] && debug "Called trap" ; maybe_reload_networkd' EXIT
+        trap 'if [ -v EC2_IF_INITIAL_SETUP ]; then debug "Called trap"; fi; maybe_reload_networkd' EXIT
         # If the redirect fails, most likely because the target file
         # already exists and -o noclobber is in effect, $? will be set
         # nonzero.  If it succeeds, it is set to 0
