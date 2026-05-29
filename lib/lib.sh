@@ -140,7 +140,9 @@ get_meta() {
     local key=$1
     local max_tries=${2:-10}
     declare -i attempts=0
-    [ -v EC2_IF_INITIAL_SETUP ] && debug "[get_meta] Querying IMDS for ${key}"
+    if [ -v EC2_IF_INITIAL_SETUP ]; then
+        debug "[get_meta] Querying IMDS for ${key}"
+    fi
 
     if [[ -z $imds_endpoint || -z $imds_token || -z $imds_interface ]]; then
         error "[get_meta] Unable to obtain IMDS token, endpoint, or interface"
@@ -632,7 +634,9 @@ maybe_reload_networkd() {
             networkctl reload
             debug "Reloaded networkd"
         else
-            [ -v EC2_IF_INITIAL_SETUP ] && debug "No networkd reload needed"
+            if [ -v EC2_IF_INITIAL_SETUP ]; then
+                debug "No networkd reload needed"
+            fi
         fi
     else
         debug "Deferring networkd reload to another process"
@@ -642,9 +646,21 @@ maybe_reload_networkd() {
 
 register_networkd_reloader() {
     local -i registered=1 cnt=0
-    local -i max=10000
+    local -i max=3000   # 300s (3000 × 0.1s); matches sysfs wait timeout in setup-policy-routes.sh
     local -r lockfile="${lockdir}/${iface}"
     local old_opts=$-
+
+    # If the existing lock owner is no longer alive, remove the stale lockfile
+    # so subsequent invocations don't spin for up to 1000 seconds waiting on a
+    # process that will never release it.
+    if [ -f "${lockfile}" ]; then
+        local existing_pid
+        existing_pid=$(cat "${lockfile}" 2>/dev/null)
+        if [ -n "$existing_pid" ] && ! kill -0 "$existing_pid" 2>/dev/null; then
+            debug "Removing stale lock from dead process $existing_pid for ${iface}"
+            rm -f "${lockfile}"
+        fi
+    fi
 
     # Disable -o errexit in the following block so we can capture
     # nonzero exit codes from a redirect without considering them
@@ -653,7 +669,7 @@ register_networkd_reloader() {
     while [ $cnt -lt $max ]; do
         cnt+=1
         mkdir -p "$lockdir"
-        trap '[ -v EC2_IF_INITIAL_SETUP ] && debug "Called trap" ; maybe_reload_networkd' EXIT
+        trap 'if [ -v EC2_IF_INITIAL_SETUP ]; then debug "Called trap"; fi; maybe_reload_networkd' EXIT
         # If the redirect fails, most likely because the target file
         # already exists and -o noclobber is in effect, $? will be set
         # nonzero.  If it succeeds, it is set to 0
