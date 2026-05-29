@@ -1,5 +1,5 @@
 Name:    amazon-ec2-net-utils
-%define  base_version 2.7.2
+%define  base_version 2.7.3
 %define  source_version %{base_version}%{?_source_version_suffix}
 Version: %{base_version}%{?_rpm_version_suffix}
 Release: 1%{?dist}
