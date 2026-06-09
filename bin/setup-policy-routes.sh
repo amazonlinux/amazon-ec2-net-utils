@@ -50,7 +50,7 @@ refresh)
 start)
     register_networkd_reloader
     counter=0
-    max_wait=3000   # 5 minute timeout to avoid infinite loop if sysfs node never appears
+    max_wait=6000   # 10 minute timeout to avoid infinite loop if sysfs node never appears
     while [ ! -e "/sys/class/net/${iface}" ]; do
         if ((counter % 1000 == 0)); then
             debug "Waiting for sysfs node to exist for ${iface} (iteration $counter)"
