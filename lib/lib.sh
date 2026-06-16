@@ -689,7 +689,7 @@ maybe_reload_networkd() {
 
 register_networkd_reloader() {
     local -i registered=1 cnt=0
-    local -i max=3000   # 300s (3000 × 0.1s); matches sysfs wait timeout in setup-policy-routes.sh
+    local -i max=6000   # 600s (6000 × 0.1s); matches sysfs wait timeout in setup-policy-routes.sh
     local -r lockfile="${lockdir}/${iface}"
     local old_opts=$-
 
