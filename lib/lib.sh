@@ -539,39 +539,68 @@ _get_device_number() {
 # The value, like device-number, may not have propagated to IMDS
 # when a hot-plugged interface first appears.  We can't tell
 # "undefined for this instance type" from "not yet propagated" from
-# a single query, so we retry on empty.  Once the first ENI on this
-# boot has exhausted the retry loop with no value, we touch a marker
-# so subsequent ENIs skip the retry entirely. Without
-# this retry we can silently substitute 0 for a real network-card
-# index on multi-card instances, colliding route metrics and
-# routing-table IDs across interfaces.
+# a single query, so we retry on empty. Without this retry we can
+# silently substitute 0 for a real network-card index on multi-card
+# instances, colliding route metrics and routing-table IDs across
+# interfaces.
+#
+# How long we retry depends on whether this is a multi-card instance.
+# The network-card IMDS key only exists on multi-card instance types
+# (p4d, p5, dl1, trn1, etc.). On single-card instances it returns
+# empty/404. We cannot distinguish "not supported" from "not yet
+# propagated" in a single query, so we use a marker file to avoid
+# repeating expensive retries once we know the key is absent.
+# We need two kinds of markers because it's hard to tell when we 
+# do or don't have network-card or it's a delay.
 _get_network_card() {
     local iface ether network_card
     iface="$1"
     ether="$2"
+    network_card=0
 
     if _is_primary_interface "$ether"; then
         echo 0 ; return 0
     fi
 
-    local marker="${runtimeroot}/.no-network-card"
-    if [ -e "$marker" ]; then
-        echo ${network_card}
+    local no_marker="${runtimeroot}/.no-network-card"
+    local has_marker="${runtimeroot}/.has-network-card"
+
+    # Instance confirmed not to support network-card: single IMDS call just to be safe.
+    # In the unlikely scenario where both markers are present the has_marker takes 
+    # precedence.
+    if [ -e "$no_marker" ] && [ ! -e "$has_marker" ]; then
+        network_card=$(get_iface_imds "$ether" network-card 1)
+        echo "${network_card:-0}"
         return 0
     fi
 
-    local -i maxtries=40 ntries=0
+    # Determine retry budget based on whether we know this is multi-card.
+    # On multi-card the propagation delay can be long.
+    local -i maxtries=8
+    local sleep_interval=0.5
+    if [ -e "$has_marker" ]; then
+        maxtries=12
+        sleep_interval=1
+    fi
+
+    local -i ntries=0
     for (( ntries = 0; ntries < maxtries; ntries++ )); do
         network_card=$(get_iface_imds "$ether" network-card 1)
         if [ -n "$network_card" ]; then
+            if [ ! -e "$has_marker" ] && [ ! -e "$no_marker" ]; then
+                touch "$has_marker"
+            fi
             echo "$network_card"
             return 0
         fi
-        sleep 0.1
+        sleep $sleep_interval
     done
 
-    touch "$marker"
-    echo ${network_card}
+    # Not found. Mark as single-card.
+    if [ ! -e "$has_marker" ] && [ ! -e "$no_marker" ]; then
+        touch "$no_marker"
+    fi
+    echo 0
     return 0
 }
 
