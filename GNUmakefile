@@ -12,9 +12,12 @@ SHARE_DIR=${DESTDIR}/${PREFIX}/share/${pkgname}
 
 SHELLSCRIPTS=$(wildcard bin/*.sh)
 SHELLLIBS=$(wildcard lib/*.sh)
+SHELLTESTS=$(wildcard tests/*.bash tests/*.bats)
 UDEVRULES=$(wildcard udev/*.rules)
 
 DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SHARE_DIR}
+
+BATS?=bats
 
 .PHONY: help
 help: ## show help
@@ -40,11 +43,20 @@ install: ${SHELLSCRIPTS} ${UDEVRULES} ${SHELLLIBS} | ${DIRS} ## Install the soft
 	$(foreach f,$(wildcard systemd/network/*.network),install -m644 $f ${SYSTEMD_NETWORK_DIR};)
 	$(foreach f,$(wildcard systemd/system/*.service systemd/system/*.timer),install -m644 $f ${SYSTEMD_SYSTEM_DIR};)
 
+.PHONY: lint
+lint: ## Run shellcheck
+	shellcheck --severity warning ${SHELLSCRIPTS} ${SHELLLIBS} ${SHELLTESTS}
+
+.PHONY: unit-test
+unit-test: ## Run Bats unit tests
+	@command -v ${BATS} >/dev/null 2>&1 || { \
+		echo "Bats is required to run unit tests. Set BATS=/path/to/bats if it is not in PATH." >&2; \
+		exit 1; \
+	}
+	${BATS} tests
+
 .PHONY: check
-check: ## Run tests
-	@set -x; for script in ${SHELLSCRIPTS} ${SHELLLIBS}; do \
-		shellcheck --severity warning $${script};\
-	done
+check: lint unit-test ## Run all checks
 
 .PHONY: scratch-rpm
 scratch-rpm: source_version_suffix=$(shell git describe --dirty --tags | sed "s,^v${version},,")

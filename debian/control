@@ -2,7 +2,7 @@ Source: amazon-ec2-net-utils
 Section: net
 Priority: optional
 Maintainer: Noah Meyerhans <nmeyerha@amazon.com>
-Build-Depends: debhelper-compat (= 12), shellcheck
+Build-Depends: bats, debhelper-compat (= 12), shellcheck
 Standards-Version: 4.4.1
 Homepage: https://github.com/amazonlinux/amazon-ec2-net-utils
 #Vcs-Browser: https://salsa.debian.org/debian/amazon-ec2-net-utils
