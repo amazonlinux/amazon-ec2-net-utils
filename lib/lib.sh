@@ -14,33 +14,33 @@
 # permissions and limitations under the License.
 
 # These should be set by the calling program
-declare ether
-declare unitdir
-declare lockdir
-declare reload_flag
-declare runtimeroot
+declare -g ether
+declare -g unitdir
+declare -g lockdir
+declare -g reload_flag
+declare -g runtimeroot
 
 # Version information - substituted during installation
-declare PACKAGE_VERSION="AMAZON_EC2_NET_UTILS_VERSION"
+declare -g PACKAGE_VERSION="AMAZON_EC2_NET_UTILS_VERSION"
 if [ -z "$PACKAGE_VERSION" ]; then
     PACKAGE_VERSION="unknown"
 fi
-declare -r USER_AGENT="amazon-ec2-net-utils/$PACKAGE_VERSION"
-declare -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::254]/latest")
-declare -r imds_token_path="api/token"
-declare -r syslog_facility="user"
-declare -r syslog_tag="ec2net"
-declare -i -r rule_base=10000
-declare -r default_route="DEFAULT"
+declare -g -r USER_AGENT="amazon-ec2-net-utils/$PACKAGE_VERSION"
+declare -g -a -r imds_endpoints=("http://169.254.169.254/latest" "http://[fd00:ec2::254]/latest")
+declare -g -r imds_token_path="api/token"
+declare -g -r syslog_facility="user"
+declare -g -r syslog_tag="ec2net"
+declare -g -i -r rule_base=10000
+declare -g -r default_route="DEFAULT"
 
 # Systemd installs routes with a metric of 1024 by default.  We
 # override to a lower metric to ensure that our fully configured
 # interfaces are preferred over those in the process of being
 # configured.
-declare -i -r metric_base=512
-declare imds_endpoint=""
-declare imds_token=""
-declare imds_interface=""
+declare -g -i -r metric_base=512
+declare -g imds_endpoint=""
+declare -g imds_token=""
+declare -g imds_interface=""
 
 make_token_request() {
     local ep=${1:-""}

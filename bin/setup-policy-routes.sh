@@ -16,10 +16,11 @@
 set -eo pipefail -o noclobber -o nounset
 
 export unitdir lockdir runtimeroot reload_flag
-declare -r runtimeroot="/run/amazon-ec2-net-utils"
+declare -r runtimeroot="${EC2_NET_UTILS_RUNTIME_ROOT_OVERRIDE:-/run/amazon-ec2-net-utils}"
 declare -r lockdir="${runtimeroot}/setup-policy-routes"
-declare -r unitdir="/run/systemd/network"
+declare -r unitdir="${EC2_NET_UTILS_UNIT_DIR_OVERRIDE:-/run/systemd/network}"
 declare -r reload_flag="${runtimeroot}/.policy-routes-reload-networkd"
+declare -r sys_class_net="${EC2_NET_UTILS_SYS_CLASS_NET_OVERRIDE:-/sys/class/net}"
 
 libdir=${LIBDIR_OVERRIDE:-AMAZON_EC2_NET_UTILS_LIBDIR}
 # shellcheck source=../lib/lib.sh
@@ -31,7 +32,7 @@ iface="$1"
 mkdir -p "$runtimeroot"
 
 do_setup() {
-    ether=$(cat /sys/class/net/${iface}/address)
+    ether=$(cat "${sys_class_net}/${iface}/address")
 
     declare -i changes=0
     changes+=$(setup_interface $iface $ether)
@@ -43,7 +44,7 @@ do_setup() {
 case "$2" in
 refresh)
     register_networkd_reloader
-    [ -e "/sys/class/net/${iface}" ] || exit 0
+    [ -e "${sys_class_net}/${iface}" ] || exit 0
     debug "Starting configuration refresh for $iface"
     do_setup
     ;;
@@ -51,7 +52,7 @@ start)
     register_networkd_reloader
     counter=0
     max_wait=6000   # 10 minute timeout to avoid infinite loop if sysfs node never appears
-    while [ ! -e "/sys/class/net/${iface}" ]; do
+    while [ ! -e "${sys_class_net}/${iface}" ]; do
         if ((counter % 1000 == 0)); then
             debug "Waiting for sysfs node to exist for ${iface} (iteration $counter)"
         fi
@@ -78,7 +79,7 @@ remove)
     # https://github.com/amazonlinux/amazon-ec2-net-utils/pull/107/changes/c35c4d504fea196af3aa4a00c84b17fa54657d9e).
     # In addtion, this code also runs during upgrade, only run this when sysfs node is not present.
     # This means that it's an actual detach rather than a restart.
-    if [ -e "/sys/class/net/${iface}" ]; then
+    if [ -e "${sys_class_net}/${iface}" ]; then
         debug "Link ${iface} still present, skipping configuration removal."
         exit 0
     fi

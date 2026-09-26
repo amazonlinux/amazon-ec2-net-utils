@@ -16,10 +16,11 @@
 set -eCo pipefail
 
 libdir=${LIBDIR_OVERRIDE:-/usr/share/amazon-ec2-net-utils}
+hostname_file=${EC2_NET_UTILS_HOSTNAME_FILE_OVERRIDE:-/etc/hostname}
 
 . "${libdir}/lib.sh"
 
-if [ -s /etc/hostname ]; then
+if [ -s "$hostname_file" ]; then
     info "Static hostname is already set - not modifying existing hostname"
     exit 0
 fi

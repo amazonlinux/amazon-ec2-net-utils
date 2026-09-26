@@ -1,4 +1,4 @@
-name: shellcheck
+name: shellcheck and unit tests
 
 on:
   push:
@@ -15,6 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
-      run: sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get -y install shellcheck
-    - name: Run shellcheck
-      run: shellcheck -s bash -S warning bin/*.sh lib/*.sh
+      run: sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get -y install bats shellcheck
+    - name: Run checks
+      run: make check
