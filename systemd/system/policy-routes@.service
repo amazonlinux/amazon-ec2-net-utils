@@ -1,6 +1,7 @@
 [Unit]
 Description=Set up policy routes for %I
-StartLimitIntervalSec=10
+After=systemd-networkd.service
+StartLimitIntervalSec=60
 StartLimitBurst=5
 Wants=refresh-policy-routes@%i.timer
 CollectMode=inactive-or-failed

@@ -65,8 +65,8 @@ start)
         fi
     done
     debug "Starting configuration for $iface"
-    debug /lib/systemd/systemd-networkd-wait-online -i "$iface"
-    /lib/systemd/systemd-networkd-wait-online -i "$iface"
+    debug /lib/systemd/systemd-networkd-wait-online -i "$iface" --timeout=60
+    /lib/systemd/systemd-networkd-wait-online -i "$iface" --timeout=60
     export EC2_IF_INITIAL_SETUP=1
     do_setup
     ;;
