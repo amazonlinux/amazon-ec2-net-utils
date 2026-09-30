@@ -161,3 +161,76 @@ load test_helper
     [ "$imds_interface" = "$default_route" ]
     [ "$(wc -l < "$request_log")" -eq 2 ]
 }
+
+@test "get_meta does not log curl errors for single-attempt optional keys" {
+    local logger_log="${BATS_TEST_TMPDIR}/logger.log"
+    local error_log="${BATS_TEST_TMPDIR}/error.log"
+    imds_endpoint="http://169.254.169.254/latest"
+    imds_token="test-token"
+    imds_interface="$default_route"
+
+    # A missing optional key (e.g. ipv4-prefix, network-card) returns 404.
+    curl() {
+        printf 'curl: (22) The requested URL returned error: 404\n' >&2
+        return 22
+    }
+    logger() {
+        # Arguments carry priority/tag; curl's stderr (when forwarded)
+        # arrives on stdin for the err-priority logger only.
+        printf '%s\n' "$*" >> "$logger_log"
+        case "$*" in
+            *user.err*) cat >> "$logger_log" ;;
+        esac
+    }
+    error() {
+        printf '%s\n' "$*" >> "$error_log"
+    }
+
+    run get_meta "network/interfaces/macs/00:11:22:33:44:55/ipv4-prefix" 1
+
+    [ "$status" -eq 1 ]
+    [ -z "$output" ]
+    # curl stderr would be forwarded asynchronously via a process
+    # substitution; allow it time to land before asserting it did not.
+    sleep 0.2
+    # The debug "[get_meta] Querying IMDS" trace is expected; what must not
+    # appear is anything at err priority, nor curl's own stderr text.
+    # (A bare "! grep" does not fail a Bats test, so assert via run.)
+    run grep -F -- "user.err" "$logger_log"
+    [ "$status" -eq 1 ]
+    run grep -F -- "returned error: 404" "$logger_log"
+    [ "$status" -eq 1 ]
+    [ ! -e "$error_log" ]
+}
+
+@test "get_meta logs curl errors at err priority when retrying" {
+    local logger_log="${BATS_TEST_TMPDIR}/logger.log"
+    imds_endpoint="http://169.254.169.254/latest"
+    imds_token="test-token"
+    imds_interface="$default_route"
+
+    curl() {
+        printf 'curl: (28) Operation timed out after 5000 milliseconds\n' >&2
+        return 28
+    }
+    logger() {
+        # The priority/tag arguments come first; stderr lines arrive on stdin.
+        printf '%s\n' "$*" >> "$logger_log"
+        cat >> "$logger_log"
+    }
+    error() {
+        :
+    }
+
+    run get_meta "local-ipv4s" 2
+
+    [ "$status" -eq 1 ]
+    # curl stderr is forwarded through a process substitution, which runs
+    # asynchronously; wait briefly for it rather than sleeping a fixed time.
+    for _ in $(seq 1 50); do
+        [ -s "$logger_log" ] && grep -q "Operation timed out" "$logger_log" && break
+        sleep 0.02
+    done
+    grep -F -- "user.err" "$logger_log"
+    grep -F -- "Operation timed out" "$logger_log"
+}
