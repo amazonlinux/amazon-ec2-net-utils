@@ -161,8 +161,17 @@ get_meta() {
     fi
 
     while [ $attempts -lt $max_tries ]; do
-        meta=$(curl "${curl_opts[@]}" "$url" \
-            2> >(logger --id=$$ --priority "${syslog_facility}.err" --tag "$syslog_tag"))
+        if [ "$max_tries" -gt 1 ]; then
+            meta=$(curl "${curl_opts[@]}" "$url" \
+                2> >(logger --id=$$ --priority "${syslog_facility}.err" --tag "$syslog_tag"))
+        else
+            # Single-attempt callers query keys that may legitimately be
+            # absent (e.g. ipv4-prefix when no prefix is delegated, or
+            # network-card on single-card instance types), so a 404 is an
+            # expected outcome rather than an error. Discard curl's stderr to
+            # match the summary error suppression below.
+            meta=$(curl "${curl_opts[@]}" "$url" 2> /dev/null)
+        fi
         rc=$?
         if [ $rc -eq 0 ]; then
             echo "$meta"
