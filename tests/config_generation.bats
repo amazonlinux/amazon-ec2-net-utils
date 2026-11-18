@@ -96,6 +96,48 @@ EOF
     [ ! -e "$config" ]
 }
 
+# This test first creates an alias configuration from healthy IMDS data, then
+# simulates an IMDS outage and verifies that the existing file is left exactly
+# unchanged with no temporary file behind. Finally, it restores IMDS with a new
+# secondary address and verifies that normal configuration updates resume.
+@test "create_ipv4_aliases preserves aliases during IMDS failure and updates after recovery" {
+    local baseline="${BATS_TEST_TMPDIR}/ec2net_alias.baseline"
+    local config="${unitdir}/70-ens6.network.d/ec2net_alias.conf"
+
+    subnet_supports_ipv4() {
+        return 0
+    }
+    get_and_validate_imds() {
+        printf '%s\n' "10.0.0.5" "10.0.0.10"
+    }
+    create_ipv4_aliases "ens6" "00:11:22:33:44:55" >/dev/null
+    [ -s "$config" ]
+    cp "$config" "$baseline"
+
+    get_and_validate_imds() {
+        return 1
+    }
+
+    run create_ipv4_aliases "ens6" "00:11:22:33:44:55"
+
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    cmp -s "$config" "$baseline"
+    [ ! -e "${config}.new" ]
+
+    get_and_validate_imds() {
+        printf '%s\n' "10.0.0.5" "10.0.0.20"
+    }
+
+    run create_ipv4_aliases "ens6" "00:11:22:33:44:55"
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+    grep -Fx "Address=10.0.0.20/32" "$config"
+    run grep -Fx "Address=10.0.0.10/32" "$config"
+    [ "$status" -eq 1 ]
+}
+
 @test "create_rules writes address and prefix policy rules using the interface table" {
     local expected="${BATS_TEST_TMPDIR}/expected"
     local config

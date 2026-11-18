@@ -21,6 +21,8 @@ declare -r lockdir="${runtimeroot}/setup-policy-routes"
 declare -r unitdir="${EC2_NET_UTILS_UNIT_DIR_OVERRIDE:-/run/systemd/network}"
 declare -r reload_flag="${runtimeroot}/.policy-routes-reload-networkd"
 declare -r sys_class_net="${EC2_NET_UTILS_SYS_CLASS_NET_OVERRIDE:-/sys/class/net}"
+declare -i -r sysfs_wait_max="${EC2_NET_UTILS_SYSFS_WAIT_MAX_OVERRIDE:-6000}"
+declare -r systemctl_bin="${EC2_NET_UTILS_SYSTEMCTL_OVERRIDE:-/usr/bin/systemctl}"
 
 libdir=${LIBDIR_OVERRIDE:-AMAZON_EC2_NET_UTILS_LIBDIR}
 # shellcheck source=../lib/lib.sh
@@ -51,7 +53,7 @@ refresh)
 start)
     register_networkd_reloader
     counter=0
-    max_wait=6000   # 10 minute timeout to avoid infinite loop if sysfs node never appears
+    max_wait=$sysfs_wait_max   # 10 minute production default; tests may override
     while [ ! -e "${sys_class_net}/${iface}" ]; do
         if ((counter % 1000 == 0)); then
             debug "Waiting for sysfs node to exist for ${iface} (iteration $counter)"
@@ -60,7 +62,7 @@ start)
         ((counter++)) || true
         if ((counter >= max_wait)); then
             error "Timed out waiting for sysfs node for ${iface} after $((counter / 10)) seconds"
-            /usr/bin/systemctl disable --now refresh-policy-routes@${iface}.timer 2>/dev/null || true
+            "$systemctl_bin" disable --now refresh-policy-routes@${iface}.timer 2>/dev/null || true
             exit 2
         fi
     done

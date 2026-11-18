@@ -14,6 +14,10 @@ load test_helper
     [ "$output" = "ens6" ]
 }
 
+# This test replaces curl with a recorder and verifies the complete IMDSv2
+# token request assembled by make_token_request. The request must use the
+# selected network interface, token TTL header, package user-agent, and token
+# endpoint.
 @test "make_token_request passes the interface and token request options to curl" {
     local curl_log="${BATS_TEST_TMPDIR}/curl.log"
     curl() {
@@ -28,9 +32,15 @@ load test_helper
     grep -Fx -- "--interface" "$curl_log"
     grep -Fx -- "ens6" "$curl_log"
     grep -Fx -- "X-aws-ec2-metadata-token-ttl-seconds: 60" "$curl_log"
+    grep -Fx -- "-A" "$curl_log"
+    grep -Fx -- "$USER_AGENT" "$curl_log"
     grep -Fx -- "http://169.254.169.254/latest/api/token" "$curl_log"
 }
 
+# This test records the curl invocation used for an authenticated metadata
+# lookup. It verifies that get_meta returns the response while sending the
+# selected interface, IMDSv2 token header, package user-agent, and requested
+# metadata URL.
 @test "get_meta returns metadata and sends authentication options to curl" {
     local curl_log="${BATS_TEST_TMPDIR}/curl.log"
     imds_endpoint="http://169.254.169.254/latest"
@@ -49,6 +59,8 @@ load test_helper
     grep -Fx -- "--interface" "$curl_log"
     grep -Fx -- "ens6" "$curl_log"
     grep -Fx -- "X-aws-ec2-metadata-token:test-token" "$curl_log"
+    grep -Fx -- "-A" "$curl_log"
+    grep -Fx -- "$USER_AGENT" "$curl_log"
     grep -Fx -- "http://169.254.169.254/latest/meta-data/local-ipv4" "$curl_log"
 }
 
