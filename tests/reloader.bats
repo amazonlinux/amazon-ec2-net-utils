@@ -77,7 +77,10 @@ load test_helper
     [ "$(cat "$lockfile")" != "12345" ]
 }
 
-# AmiTest source: ec2-net-utils-infinite-loop-fix
+# This test creates a lock owned by a deliberately nonexistent process and
+# replaces kill with a predictable liveness check. It verifies that registration
+# identifies and removes the stale lock, logs that decision, and installs a new
+# lock for the current process instead of waiting indefinitely.
 @test "register_networkd_reloader replaces a stale lock from a dead process" {
     local debug_log="${BATS_TEST_TMPDIR}/debug.log"
     local lockfile

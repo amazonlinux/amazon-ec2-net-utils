@@ -12,7 +12,7 @@ SHARE_DIR=${DESTDIR}/${PREFIX}/share/${pkgname}
 
 SHELLSCRIPTS=$(wildcard bin/*.sh)
 SHELLLIBS=$(wildcard lib/*.sh)
-SHELLTESTS=$(wildcard tests/*.bash tests/*.bats)
+SHELLTESTS=$(wildcard tests/*.bash tests/*.bats tests/fixtures/*/*.sh)
 UDEVRULES=$(wildcard udev/*.rules)
 
 DIRS:=${BINDIR} ${UDEVDIR} ${SYSTEMDDIR} ${SYSTEMD_SYSTEM_DIR} ${SYSTEMD_NETWORK_DIR} ${SHARE_DIR}

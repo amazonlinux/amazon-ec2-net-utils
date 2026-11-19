@@ -5,9 +5,10 @@ Subject: [PATCH] change the priority of the networkd configs
 
 ensure they're order before netplan
 ---
- bin/setup-policy-routes.sh | 6 +++---
- lib/lib.sh                 | 6 +++---
- 2 files changed, 6 insertions(+), 6 deletions(-)
+ bin/setup-policy-routes.sh   | 6 +++---
+ lib/lib.sh                   | 6 +++---
+ tests/config_generation.bats | 2 +-
+ 3 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/bin/setup-policy-routes.sh b/bin/setup-policy-routes.sh
 index 5c4be18..4beefff 100755
@@ -64,3 +65,16 @@ index a794ca0..603c522 100644
      if [ -e "$cfgfile" ] &&
             [ ! -v EC2_IF_INITIAL_SETUP ]; then
          echo $retval
+diff --git a/tests/config_generation.bats b/tests/config_generation.bats
+index 2588eee..6f0c9d5 100644
+--- a/tests/config_generation.bats
++++ b/tests/config_generation.bats
+@@ -102,7 +102,7 @@ EOF
+ # secondary address and verifies that normal configuration updates resume.
+ @test "create_ipv4_aliases preserves aliases during IMDS failure and updates after recovery" {
+     local baseline="${BATS_TEST_TMPDIR}/ec2net_alias.baseline"
+-    local config="${unitdir}/70-ens6.network.d/ec2net_alias.conf"
++    local config="${unitdir}/07-ens6.network.d/ec2net_alias.conf"
+ 
+     subnet_supports_ipv4() {
+         return 0
